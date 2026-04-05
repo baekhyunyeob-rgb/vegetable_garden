@@ -2,8 +2,9 @@
 const STATE = {
   currentTab: 'my-farm',
   farm: {           // 내 텃밭 데이터
-    lands: [],      // [{jibun, area, unit, jimok}]
+    lands: [],      // [{jibun, jimok}]
     crops: [],      // [{jibun, category, name, area, unit}]
+    pendingCrops: [], // 현재 입력 중인 작물 (임시)
   },
   calendar: {       // 농작업 데이터
     year: new Date().getFullYear(),

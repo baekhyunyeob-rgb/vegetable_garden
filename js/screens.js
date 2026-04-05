@@ -1,47 +1,42 @@
 // ════════════════════════════════════════════════════
-// 화면 1 — 내 텃밭
+// 화면 1 — 내 텃밭 (개선된 UX)
 // ════════════════════════════════════════════════════
+
+// 현재 입력 중인 지번 인덱스 (null이면 새 입력 모드)
+let editingLandIdx = null;
+let selectedCatIdx = 0;
+
 function renderMyFarm() {
   const el = document.getElementById('screen-my-farm');
   el.innerHTML = `
-
-    <!-- ① 토지 -->
-    <div class="card">
+    <!-- ① 토지 + 작물 입력 카드 -->
+    <div class="card" id="land-input-card">
       <div class="section-row">
         <div class="section-num">1</div>
         <span class="section-title">토지</span>
-        <div class="section-pill" id="land-pill">지번을 선택하세요</div>
+        <button onclick="addNewLandSlot()" style="margin-left:auto;font-size:10px;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:5px;padding:2px 10px;background:white;cursor:pointer;">+ 토지 추가</button>
       </div>
 
-      <!-- 지도 영역 (카카오맵 예정) -->
-      <div id="farm-map" style="width:100%;height:140px;background:#C8DFC8;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;">
+      <!-- 지도 영역 -->
+      <div id="farm-map" style="width:100%;height:120px;background:#C8DFC8;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;">
         <span style="font-size:12px;color:#555;">지도 영역 (카카오맵 연동 예정)</span>
       </div>
 
       <!-- 지번 입력 + GPS -->
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
         <input type="text" id="jibun-input" placeholder="지번 입력 (예: 서천읍 화금리 123-4)" style="flex:1;" />
         <button onclick="findByGPS()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;">GPS</button>
       </div>
 
-      <button class="btn-outline" onclick="addLand()" style="width:100%;">+ 토지 추가</button>
-
-      <!-- 등록된 토지 목록 -->
-      <div id="land-list"></div>
-    </div>
-
-    <hr class="divider">
-
-    <!-- ② 작물 -->
-    <div class="card">
-      <div class="section-row">
+      <!-- 작물 섹션 -->
+      <div class="section-row" style="margin-top:4px;">
         <div class="section-num">2</div>
         <span class="section-title">작물</span>
-        <div class="section-pill" id="crop-pill">작물을 선택하세요</div>
+        <button onclick="addCropRow()" style="margin-left:auto;font-size:10px;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:5px;padding:2px 10px;background:white;cursor:pointer;">+ 작물 추가</button>
       </div>
 
       <!-- 분류 탭 -->
-      <div style="display:flex;gap:4px;margin-bottom:0;" id="cat-tabs">
+      <div style="display:flex;gap:4px;margin-bottom:8px;" id="cat-tabs">
         ${CROP_CATEGORIES.map((cat, i) => `
           <button onclick="selectCatTab(${i})"
             id="cat-tab-${i}"
@@ -51,15 +46,17 @@ function renderMyFarm() {
         `).join('')}
       </div>
 
-      <!-- 작물 팝업 -->
-      <div id="crop-popup" style="background:#f8f8f8;border-radius:8px;padding:8px;margin-top:8px;display:none;">
+      <!-- 작물 칩 선택 -->
+      <div id="crop-popup" style="background:#f8f8f8;border-radius:8px;padding:8px;margin-bottom:8px;">
         <div id="crop-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;max-height:80px;overflow-y:auto;"></div>
-        <div id="crop-inputs"></div>
       </div>
-    </div>
 
-    <!-- 선택 바 -->
-    <button class="btn-primary" onclick="confirmCrops()">선택</button>
+      <!-- 선택된 작물 입력란 -->
+      <div id="crop-inputs"></div>
+
+      <!-- 선택 버튼 -->
+      <button class="btn-primary" onclick="confirmEntry()" style="margin-top:8px;">선택 →</button>
+    </div>
 
     <hr class="divider">
 
@@ -68,71 +65,32 @@ function renderMyFarm() {
       <div class="section-row">
         <div class="section-num">3</div>
         <span class="section-title">경작 목록</span>
-        <button onclick="editCropList()" style="margin-left:auto;font-size:10px;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:5px;padding:2px 8px;background:white;cursor:pointer;">수정</button>
       </div>
       <div id="crop-list">
         <div style="font-size:11px;color:#ccc;text-align:center;padding:12px 0;">경작 목록이 없습니다</div>
       </div>
     </div>
 
-    <!-- 확인 바 -->
     <button class="btn-primary" onclick="confirmFarm()">확인 →</button>
   `;
 
-  renderLandList();
+  // 첫 탭 활성화
+  selectCatTab(0);
   renderCropList();
 }
 
-// 토지 추가
-function addLand() {
+function addNewLandSlot() {
+  // 지번 입력란 초기화 및 포커스
   const input = document.getElementById('jibun-input');
-  const jibun = input.value.trim();
-  if (!jibun) { alert('지번을 입력하세요'); return; }
-
-  STATE.farm.lands.push({
-    jibun,
-    area: null,   // 공간정보 API 자동조회 예정
-    jimok: '밭',  // 자동조회 예정
-  });
-  input.value = '';
-  saveState();
-  renderLandList();
-  updateLandPill();
+  if (input) { input.value = ''; input.focus(); }
 }
 
-function renderLandList() {
-  const el = document.getElementById('land-list');
-  if (!el) return;
-  if (!STATE.farm.lands.length) { el.innerHTML = ''; return; }
-
-  el.innerHTML = STATE.farm.lands.map((l, i) => `
-    <div style="display:flex;align-items:center;gap:6px;background:#f8f8f8;border-radius:8px;padding:8px;margin-top:6px;">
-      <div style="flex:1;">
-        <div style="font-size:12px;font-weight:500;">${l.jibun}</div>
-        <div style="font-size:10px;color:#999;margin-top:2px;">${l.area ? l.area + '㎡ (약 ' + sqmToPyeong(l.area) + '평)' : '면적 조회 중...'}</div>
-      </div>
-      <span class="badge badge-${l.jimok}">${l.jimok}</span>
-      <button onclick="removeLand(${i})" style="font-size:10px;color:#ccc;border:none;background:none;cursor:pointer;">삭제</button>
-    </div>
-  `).join('');
+function addCropRow() {
+  // 작물 칩 영역 열기 (이미 열려있으면 그대로)
+  const popup = document.getElementById('crop-popup');
+  if (popup) popup.style.display = 'block';
 }
 
-function removeLand(i) {
-  STATE.farm.lands.splice(i, 1);
-  saveState();
-  renderLandList();
-  updateLandPill();
-}
-
-function updateLandPill() {
-  const pill = document.getElementById('land-pill');
-  if (!pill) return;
-  if (!STATE.farm.lands.length) { pill.textContent = '지번을 선택하세요'; return; }
-  pill.textContent = STATE.farm.lands.map(l => l.jibun.split(' ').slice(-1)[0]).join(' · ');
-}
-
-// 분류 탭 선택
-let selectedCatIdx = 0;
 function selectCatTab(idx) {
   selectedCatIdx = idx;
   document.querySelectorAll('[id^="cat-tab-"]').forEach((btn, i) => {
@@ -141,20 +99,17 @@ function selectCatTab(idx) {
     btn.style.borderColor = i === idx ? '#2E7D32' : '#eee';
     btn.style.fontWeight = i === idx ? '500' : 'normal';
   });
-  const popup = document.getElementById('crop-popup');
-  popup.style.display = 'block';
   renderCropChips();
 }
 
 function renderCropChips() {
   const cat = CROP_CATEGORIES[selectedCatIdx];
   const chipsEl = document.getElementById('crop-chips');
-  const inputsEl = document.getElementById('crop-inputs');
+  if (!chipsEl) return;
 
-  // 이미 선택된 작물
-  const selected = STATE.farm.crops
-    .filter(c => c.category === cat.id)
-    .map(c => c.name);
+  const selected = STATE.farm.pendingCrops
+    ? STATE.farm.pendingCrops.filter(c => c.category === cat.id).map(c => c.name)
+    : [];
 
   chipsEl.innerHTML = cat.crops.map(name => `
     <button onclick="toggleCrop('${name}', '${cat.id}', '${cat.badgeClass}')"
@@ -172,69 +127,82 @@ function renderCropChips() {
 }
 
 function toggleCrop(name, catId, badgeClass) {
-  const idx = STATE.farm.crops.findIndex(c => c.name === name && c.category === catId);
+  if (!STATE.farm.pendingCrops) STATE.farm.pendingCrops = [];
+  const idx = STATE.farm.pendingCrops.findIndex(c => c.name === name && c.category === catId);
   if (idx >= 0) {
-    STATE.farm.crops.splice(idx, 1);
+    STATE.farm.pendingCrops.splice(idx, 1);
   } else {
-    const jibun = STATE.farm.lands[0]?.jibun || '';
-    STATE.farm.crops.push({ name, category: catId, badgeClass, area: '', unit: '평', jibun });
+    STATE.farm.pendingCrops.push({ name, category: catId, badgeClass, area: '', unit: '평' });
   }
   renderCropChips();
 }
 
 function renderCropInputs(cat) {
   const inputsEl = document.getElementById('crop-inputs');
-  const catCrops = STATE.farm.crops.filter(c => c.category === cat.id);
+  if (!inputsEl) return;
+  if (!STATE.farm.pendingCrops) { inputsEl.innerHTML = ''; return; }
+
+  const catCrops = STATE.farm.pendingCrops.filter(c => c.category === cat.id);
   if (!catCrops.length) { inputsEl.innerHTML = ''; return; }
 
   inputsEl.innerHTML = catCrops.map((c, i) => `
-    <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
-      <span style="font-size:10px;color:#999;flex-shrink:0;">${i+1}.</span>
+    <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
       <span class="badge ${c.badgeClass}" style="flex-shrink:0;">${c.name}</span>
       <input type="number" placeholder="면적"
         value="${c.area}"
-        onchange="updateCropArea('${c.name}', '${c.category}', this.value)"
+        onchange="updatePendingArea('${c.name}', '${c.category}', this.value)"
         style="width:60px;padding:4px 6px;font-size:11px;" />
-      <select onchange="updateCropUnit('${c.name}', '${c.category}', this.value)"
+      <select onchange="updatePendingUnit('${c.name}', '${c.category}', this.value)"
         style="border:0.5px solid #ddd;border-radius:6px;padding:4px;font-size:10px;color:#666;">
         <option ${c.unit==='평'?'selected':''}>평</option>
         <option ${c.unit==='㎡'?'selected':''}>㎡</option>
       </select>
-      <span style="flex:1;font-size:10px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        ${c.jibun ? c.jibun.split(' ').slice(-1)[0] : ''}
-      </span>
     </div>
   `).join('');
 }
 
-function updateCropArea(name, catId, val) {
-  const c = STATE.farm.crops.find(c => c.name === name && c.category === catId);
+function updatePendingArea(name, catId, val) {
+  if (!STATE.farm.pendingCrops) return;
+  const c = STATE.farm.pendingCrops.find(c => c.name === name && c.category === catId);
   if (c) c.area = val;
 }
-function updateCropUnit(name, catId, val) {
-  const c = STATE.farm.crops.find(c => c.name === name && c.category === catId);
+
+function updatePendingUnit(name, catId, val) {
+  if (!STATE.farm.pendingCrops) return;
+  const c = STATE.farm.pendingCrops.find(c => c.name === name && c.category === catId);
   if (c) c.unit = val;
 }
 
-function confirmCrops() {
-  saveState();
-  renderCropList();
-  updateCropPill();
-  document.getElementById('crop-popup').style.display = 'none';
-}
+// 선택 버튼 → 경작목록에 추가
+function confirmEntry() {
+  const jibun = document.getElementById('jibun-input')?.value.trim();
+  if (!jibun) { alert('지번을 입력하세요'); return; }
+  if (!STATE.farm.pendingCrops || !STATE.farm.pendingCrops.length) { alert('작물을 선택하세요'); return; }
 
-function updateCropPill() {
-  const pill = document.getElementById('crop-pill');
-  if (!pill) return;
-  if (!STATE.farm.crops.length) { pill.textContent = '작물을 선택하세요'; return; }
-  pill.textContent = STATE.farm.crops.map(c => c.name).join(' · ');
+  // 지번이 없으면 추가
+  if (!STATE.farm.lands.find(l => l.jibun === jibun)) {
+    STATE.farm.lands.push({ jibun, jimok: '밭' });
+  }
+
+  // 작물에 지번 연결 후 저장
+  STATE.farm.pendingCrops.forEach(c => {
+    c.jibun = jibun;
+    STATE.farm.crops.push({ ...c });
+  });
+
+  // 초기화
+  STATE.farm.pendingCrops = [];
+  document.getElementById('jibun-input').value = '';
+  saveState();
+  renderCropChips();
+  renderCropList();
+  document.getElementById('crop-inputs').innerHTML = '';
 }
 
 function renderCropList() {
   const el = document.getElementById('crop-list');
   if (!el) return;
 
-  // 지번별 그룹핑
   const byLand = {};
   STATE.farm.crops.forEach(c => {
     const key = c.jibun || '미지정';
@@ -247,27 +215,35 @@ function renderCropList() {
     return;
   }
 
-  el.innerHTML = Object.entries(byLand).map(([jibun, crops]) => {
-    const totalArea = crops.reduce((s, c) => s + (parseFloat(c.area)||0), 0);
-    const cropStr = crops.map(c => `${c.name} ${c.area||'?'}${c.unit}`).join(' · ');
+  el.innerHTML = Object.entries(byLand).map(([jibun, crops], gi) => {
     const shortJibun = jibun.split(' ').slice(-1)[0];
+    const cropStr = crops.map(c => `${c.name} ${c.area||'?'}${c.unit}`).join(' · ');
     return `
-      <div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:0.5px solid #eee;">
-        <div style="font-size:12px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${shortJibun}</div>
-        <div style="font-size:10px;color:#999;white-space:nowrap;">${totalArea}평</div>
-        <div style="font-size:10px;color:#2E7D32;white-space:nowrap;">${cropStr}</div>
-        <div style="width:14px;height:14px;border-radius:3px;border:0.5px solid #ddd;flex-shrink:0;"></div>
+      <div style="background:#f8f8f8;border-radius:8px;padding:10px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:500;">${shortJibun}</span>
+          <button onclick="removeLandEntry(${gi})" style="font-size:10px;color:#ccc;border:none;background:none;cursor:pointer;">삭제</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${crops.map(c => `<span class="badge ${c.badgeClass||getCropBadgeClass(c.name)}">${c.name} ${c.area||'?'}${c.unit}</span>`).join('')}
+        </div>
       </div>
     `;
   }).join('');
 }
 
-function confirmFarm() {
+function removeLandEntry(groupIdx) {
+  const byLand = {};
+  STATE.farm.crops.forEach(c => {
+    const key = c.jibun || '미지정';
+    if (!byLand[key]) byLand[key] = [];
+    byLand[key].push(c);
+  });
+  const jibunToRemove = Object.keys(byLand)[groupIdx];
+  STATE.farm.crops = STATE.farm.crops.filter(c => (c.jibun || '미지정') !== jibunToRemove);
+  STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== jibunToRemove);
   saveState();
-  alert('등록 완료! 오늘의 정보를 확인하세요.');
-  switchTab('today');
-  document.querySelectorAll('.tab-btn')[1].classList.add('active');
-  document.querySelectorAll('.tab-btn')[0].classList.remove('active');
+  renderCropList();
 }
 
 function findByGPS() {
@@ -278,12 +254,14 @@ function findByGPS() {
   }, () => alert('위치를 가져올 수 없습니다.'));
 }
 
-function editCropList() {
-  renderCropChips();
-  document.getElementById('crop-popup').style.display = 'block';
+function confirmFarm() {
+  saveState();
+  alert('등록 완료! 오늘의 정보를 확인하세요.');
+  switchTab('today');
+  document.querySelectorAll('.tab-btn')[1].classList.add('active');
+  document.querySelectorAll('.tab-btn')[0].classList.remove('active');
 }
 
-// ════════════════════════════════════════════════════
 // 화면 2 — 오늘의 정보
 // ════════════════════════════════════════════════════
 function renderToday() {
