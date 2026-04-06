@@ -84,7 +84,7 @@ function renderFarmListHTML() {
   });
 
   return Object.entries(byLand).map(([jibun, crops]) => {
-    const shortJibun = jibun.split(' ').slice(-1)[0];
+    const shortJibun = jibun.split(' ').slice(-2).join(' ');
     const totalArea = crops.reduce((s, c) => s + (parseFloat(c.area) || 0), 0);
     const unit = crops[0]?.unit || '평';
     return `
@@ -121,7 +121,7 @@ function openEditSheet(jibun) {
   const crops = STATE.farm.crops.filter(c => c.jibun === jibun);
   STATE.farm.pendingCrops = crops.map(c => ({ ...c }));
 
-  document.getElementById('sheet-title').textContent = jibun.split(' ').slice(-1)[0];
+  document.getElementById('sheet-title').textContent = jibun.split(' ').slice(-2).join(' ');
   document.getElementById('sheet-delete-btn').style.display = 'block';
   document.getElementById('jibun-input').value = jibun;
   document.getElementById('register-sheet').style.display = 'block';
@@ -245,7 +245,7 @@ function confirmEntry() {
 
 function deleteLandEntry() {
   if (!editingJibun) return;
-  const name = editingJibun.split(' ').slice(-1)[0];
+  const name = editingJibun.split(' ').slice(-2).join(' ');
   if (!confirm(`${name} 토지를 삭제할까요?`)) return;
   STATE.farm.crops = STATE.farm.crops.filter(c => c.jibun !== editingJibun);
   STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== editingJibun);
