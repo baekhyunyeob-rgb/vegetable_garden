@@ -28,15 +28,16 @@ function renderMyFarm() {
           <span id="sheet-delete-btn" style="display:none;font-size:12px;color:#E24B4A;cursor:pointer;" onclick="deleteLandEntry()">이 토지 삭제</span>
         </div>
 
-        <div style="width:100%;height:120px;background:#C8DFC8;border-radius:10px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;">
-          <span style="font-size:12px;color:#555;">지도 영역 (카카오맵 연동 예정)</span>
-        </div>
+        <div id="kakao-map" style="width:100%;height:160px;border-radius:10px;margin-bottom:14px;overflow:hidden;"></div>
 
         <div style="margin-bottom:14px;">
-          <div style="font-size:11px;color:#999;margin-bottom:6px;">📍 토지 지번</div>
+          <div style="font-size:11px;color:#999;margin-bottom:6px;">📍 토지 지번 (주소 입력 후 검색)</div>
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <input type="text" id="jibun-input" placeholder="예: 충남 서천군 서천읍 화금리 123-4" style="flex:1;" />
+            <button onclick="searchAddress()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;flex-shrink:0;">검색</button>
+          </div>
           <div style="display:flex;gap:6px;">
-            <input type="text" id="jibun-input" placeholder="예: 서천읍 화금리 123-4" style="flex:1;" />
-            <button onclick="findByGPS()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;flex-shrink:0;">GPS</button>
+            <button onclick="findByGPS()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;flex-shrink:0;width:100%;">📡 GPS로 현재 위치 찾기</button>
           </div>
           <div style="font-size:10px;color:#bbb;margin-top:4px;">지번을 모르면 GPS 버튼을 눌러주세요</div>
         </div>
@@ -106,6 +107,58 @@ function renderFarmListHTML() {
   }).join('');
 }
 
+// ── 카카오맵 ────────────────────────────────────
+let kakaoMap = null;
+let kakaoMarker = null;
+let kakaoGeocoder = null;
+
+function initKakaoMap() {
+  const container = document.getElementById('kakao-map');
+  if (!container || !window.kakao) return;
+
+  const options = {
+    center: new kakao.maps.LatLng(36.0776, 126.6914), // 서천군 중심
+    level: 5,
+  };
+  kakaoMap = new kakao.maps.Map(container, options);
+  kakaoGeocoder = new kakao.maps.services.Geocoder();
+  kakaoMarker = new kakao.maps.Marker();
+
+  // 지도 클릭 시 좌표 → 주소 변환
+  kakao.maps.event.addListener(kakaoMap, 'click', function(mouseEvent) {
+    const latlng = mouseEvent.latLng;
+    kakaoGeocoder.coord2Address(latlng.getLng(), latlng.getLat(), function(result, status) {
+      if (status === kakao.maps.services.Status.OK) {
+        const addr = result[0].road_address
+          ? result[0].road_address.address_name
+          : result[0].address.address_name;
+        document.getElementById('jibun-input').value = addr;
+        kakaoMarker.setPosition(latlng);
+        kakaoMarker.setMap(kakaoMap);
+      }
+    });
+  });
+}
+
+function searchAddress() {
+  const keyword = document.getElementById('jibun-input')?.value.trim();
+  if (!keyword) { alert('주소를 입력하세요'); return; }
+  if (!kakaoGeocoder) return;
+
+  kakaoGeocoder.addressSearch(keyword, function(result, status) {
+    if (status === kakao.maps.services.Status.OK) {
+      const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+      kakaoMap.setCenter(coords);
+      kakaoMap.setLevel(3);
+      kakaoMarker.setPosition(coords);
+      kakaoMarker.setMap(kakaoMap);
+      document.getElementById('jibun-input').value = result[0].address_name;
+    } else {
+      alert('주소를 찾을 수 없어요. 더 자세히 입력해보세요.');
+    }
+  });
+}
+
 function openRegisterSheet() {
   editingJibun = null;
   STATE.farm.pendingCrops = [];
@@ -114,6 +167,7 @@ function openRegisterSheet() {
   document.getElementById('jibun-input').value = '';
   document.getElementById('register-sheet').style.display = 'block';
   selectCatTab(0);
+  setTimeout(() => initKakaoMap(), 100);
 }
 
 function openEditSheet(jibun) {
@@ -125,6 +179,22 @@ function openEditSheet(jibun) {
   document.getElementById('sheet-delete-btn').style.display = 'block';
   document.getElementById('jibun-input').value = jibun;
   document.getElementById('register-sheet').style.display = 'block';
+
+  setTimeout(() => {
+    initKakaoMap();
+    // 기존 지번으로 지도 이동
+    if (kakaoGeocoder) {
+      kakaoGeocoder.addressSearch(jibun, function(result, status) {
+        if (status === kakao.maps.services.Status.OK) {
+          const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+          kakaoMap.setCenter(coords);
+          kakaoMap.setLevel(3);
+          kakaoMarker.setPosition(coords);
+          kakaoMarker.setMap(kakaoMap);
+        }
+      });
+    }
+  }, 100);
 
   const firstCatId = crops[0]?.category;
   const idx = CROP_CATEGORIES.findIndex(c => c.id === firstCatId);
@@ -258,7 +328,28 @@ function findByGPS() {
   if (!navigator.geolocation) { alert('GPS를 지원하지 않는 기기입니다.'); return; }
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude, longitude } = pos.coords;
-    document.getElementById('jibun-input').value = `GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+    const coords = new kakao.maps.LatLng(latitude, longitude);
+
+    if (kakaoMap) {
+      kakaoMap.setCenter(coords);
+      kakaoMap.setLevel(3);
+      kakaoMarker.setPosition(coords);
+      kakaoMarker.setMap(kakaoMap);
+    }
+
+    // 좌표 → 주소 변환
+    if (kakaoGeocoder) {
+      kakaoGeocoder.coord2Address(longitude, latitude, function(result, status) {
+        if (status === kakao.maps.services.Status.OK) {
+          const addr = result[0].road_address
+            ? result[0].road_address.address_name
+            : result[0].address.address_name;
+          document.getElementById('jibun-input').value = addr;
+        }
+      });
+    } else {
+      document.getElementById('jibun-input').value = `GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+    }
   }, () => alert('위치를 가져올 수 없습니다.'));
 }
 
