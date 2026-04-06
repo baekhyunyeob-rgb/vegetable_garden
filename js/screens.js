@@ -1,94 +1,143 @@
 // ════════════════════════════════════════════════════
-// 화면 1 — 내 텃밭 (개선된 UX)
+// 화면 1 — 내 텃밭
 // ════════════════════════════════════════════════════
 
-// 현재 입력 중인 지번 인덱스 (null이면 새 입력 모드)
-let editingLandIdx = null;
 let selectedCatIdx = 0;
+let editingJibun = null;
 
 function renderMyFarm() {
   const el = document.getElementById('screen-my-farm');
+  const hasCrops = STATE.farm.crops.length > 0;
+
   el.innerHTML = `
-    <!-- ① 토지 + 작물 입력 카드 -->
-    <div class="card" id="land-input-card">
-      <div class="section-row">
-        <div class="section-num">1</div>
-        <span class="section-title">토지</span>
-        <button onclick="addNewLandSlot()" style="margin-left:auto;font-size:10px;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:5px;padding:2px 10px;background:white;cursor:pointer;">+ 토지 추가</button>
-      </div>
-
-      <!-- 지도 영역 -->
-      <div id="farm-map" style="width:100%;height:120px;background:#C8DFC8;border-radius:10px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;">
-        <span style="font-size:12px;color:#555;">지도 영역 (카카오맵 연동 예정)</span>
-      </div>
-
-      <!-- 지번 입력 + GPS -->
-      <div style="display:flex;gap:6px;margin-bottom:12px;">
-        <input type="text" id="jibun-input" placeholder="지번 입력 (예: 서천읍 화금리 123-4)" style="flex:1;" />
-        <button onclick="findByGPS()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;">GPS</button>
-      </div>
-
-      <!-- 작물 섹션 -->
-      <div class="section-row" style="margin-top:4px;">
-        <div class="section-num">2</div>
-        <span class="section-title">작물</span>
-        <button onclick="addCropRow()" style="margin-left:auto;font-size:10px;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:5px;padding:2px 10px;background:white;cursor:pointer;">+ 작물 추가</button>
-      </div>
-
-      <!-- 분류 탭 -->
-      <div style="display:flex;gap:4px;margin-bottom:8px;" id="cat-tabs">
-        ${CROP_CATEGORIES.map((cat, i) => `
-          <button onclick="selectCatTab(${i})"
-            id="cat-tab-${i}"
-            style="flex:1;font-size:9px;padding:5px 2px;border-radius:12px;border:0.5px solid #eee;color:#999;background:white;white-space:nowrap;cursor:pointer;">
-            ${cat.label}
-          </button>
-        `).join('')}
-      </div>
-
-      <!-- 작물 칩 선택 -->
-      <div id="crop-popup" style="background:#f8f8f8;border-radius:8px;padding:8px;margin-bottom:8px;">
-        <div id="crop-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;max-height:80px;overflow-y:auto;"></div>
-      </div>
-
-      <!-- 선택된 작물 입력란 -->
-      <div id="crop-inputs"></div>
-
-      <!-- 선택 버튼 -->
-      <button class="btn-primary" onclick="confirmEntry()" style="margin-top:8px;">선택 →</button>
+    <div id="farm-list-view">
+      ${hasCrops ? renderFarmListHTML() : renderFarmEmptyHTML()}
     </div>
 
-    <hr class="divider">
-
-    <!-- ③ 경작 목록 -->
-    <div class="card">
-      <div class="section-row">
-        <div class="section-num">3</div>
-        <span class="section-title">경작 목록</span>
-      </div>
-      <div id="crop-list">
-        <div style="font-size:11px;color:#ccc;text-align:center;padding:12px 0;">경작 목록이 없습니다</div>
-      </div>
+    <div style="height:70px;"></div>
+    <div style="position:sticky;bottom:0;background:white;border-top:0.5px solid #eee;padding:10px 14px;">
+      <button class="btn-primary" style="margin:0;" onclick="openRegisterSheet()">+ 텃밭 등록하기</button>
     </div>
 
-    <button class="btn-primary" onclick="confirmFarm()">확인 →</button>
+    <!-- 등록/수정 시트 -->
+    <div id="register-sheet" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.4);" onclick="closeSheetOutside(event)">
+      <div id="sheet-body" style="position:absolute;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 40px;">
+        <div style="width:36px;height:4px;background:#eee;border-radius:2px;margin:0 auto 16px;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <span style="font-size:15px;font-weight:500;" id="sheet-title">텃밭 등록</span>
+          <span id="sheet-delete-btn" style="display:none;font-size:12px;color:#E24B4A;cursor:pointer;" onclick="deleteLandEntry()">이 토지 삭제</span>
+        </div>
+
+        <div style="width:100%;height:120px;background:#C8DFC8;border-radius:10px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:12px;color:#555;">지도 영역 (카카오맵 연동 예정)</span>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px;color:#999;margin-bottom:6px;">📍 토지 지번</div>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="jibun-input" placeholder="예: 서천읍 화금리 123-4" style="flex:1;" />
+            <button onclick="findByGPS()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;flex-shrink:0;">GPS</button>
+          </div>
+          <div style="font-size:10px;color:#bbb;margin-top:4px;">지번을 모르면 GPS 버튼을 눌러주세요</div>
+        </div>
+
+        <div style="font-size:11px;color:#999;margin-bottom:6px;">🌿 작물 선택</div>
+        <div style="display:flex;gap:4px;margin-bottom:8px;" id="cat-tabs">
+          ${CROP_CATEGORIES.map((cat, i) => `
+            <button onclick="selectCatTab(${i})" id="cat-tab-${i}"
+              style="flex:1;font-size:9px;padding:5px 2px;border-radius:12px;border:0.5px solid #eee;color:#999;background:white;white-space:nowrap;cursor:pointer;">
+              ${cat.label}
+            </button>
+          `).join('')}
+        </div>
+
+        <div style="background:#f8f8f8;border-radius:8px;padding:8px;margin-bottom:8px;">
+          <div id="crop-chips" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+        </div>
+
+        <div id="crop-inputs" style="margin-bottom:14px;"></div>
+
+        <button class="btn-primary" style="margin:0;" onclick="confirmEntry()">등록 완료</button>
+      </div>
+    </div>
   `;
 
-  // 첫 탭 활성화
   selectCatTab(0);
-  renderCropList();
 }
 
-function addNewLandSlot() {
-  // 지번 입력란 초기화 및 포커스
-  const input = document.getElementById('jibun-input');
-  if (input) { input.value = ''; input.focus(); }
+function renderFarmEmptyHTML() {
+  return `
+    <div style="text-align:center;padding:60px 20px 20px;">
+      <div style="font-size:40px;margin-bottom:12px;">🌱</div>
+      <div style="font-size:14px;font-weight:500;color:#111;margin-bottom:6px;">아직 등록된 텃밭이 없어요</div>
+      <div style="font-size:12px;color:#999;line-height:1.7;">토지와 작물을 등록하면<br>맞춤 농업 정보를 알려드려요</div>
+    </div>
+  `;
 }
 
-function addCropRow() {
-  // 작물 칩 영역 열기 (이미 열려있으면 그대로)
-  const popup = document.getElementById('crop-popup');
-  if (popup) popup.style.display = 'block';
+function renderFarmListHTML() {
+  const byLand = {};
+  STATE.farm.crops.forEach(c => {
+    const key = c.jibun || '미지정';
+    if (!byLand[key]) byLand[key] = [];
+    byLand[key].push(c);
+  });
+
+  return Object.entries(byLand).map(([jibun, crops]) => {
+    const shortJibun = jibun.split(' ').slice(-1)[0];
+    const totalArea = crops.reduce((s, c) => s + (parseFloat(c.area) || 0), 0);
+    const unit = crops[0]?.unit || '평';
+    return `
+      <div onclick="openEditSheet('${jibun}')"
+        style="background:white;border:0.5px solid #eee;border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:500;color:#111;">${shortJibun}</span>
+          <span style="font-size:11px;color:#999;">총 ${totalArea}${unit}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${crops.map(c => `
+            <span class="badge ${c.badgeClass || getCropBadgeClass(c.name)}">
+              ${c.name} ${c.area || '?'}${c.unit || '평'}
+            </span>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openRegisterSheet() {
+  editingJibun = null;
+  STATE.farm.pendingCrops = [];
+  document.getElementById('sheet-title').textContent = '텃밭 등록';
+  document.getElementById('sheet-delete-btn').style.display = 'none';
+  document.getElementById('jibun-input').value = '';
+  document.getElementById('register-sheet').style.display = 'block';
+  selectCatTab(0);
+}
+
+function openEditSheet(jibun) {
+  editingJibun = jibun;
+  const crops = STATE.farm.crops.filter(c => c.jibun === jibun);
+  STATE.farm.pendingCrops = crops.map(c => ({ ...c }));
+
+  document.getElementById('sheet-title').textContent = jibun.split(' ').slice(-1)[0];
+  document.getElementById('sheet-delete-btn').style.display = 'block';
+  document.getElementById('jibun-input').value = jibun;
+  document.getElementById('register-sheet').style.display = 'block';
+
+  const firstCatId = crops[0]?.category;
+  const idx = CROP_CATEGORIES.findIndex(c => c.id === firstCatId);
+  selectCatTab(idx >= 0 ? idx : 0);
+}
+
+function closeSheetOutside(e) {
+  if (e.target.id === 'register-sheet') closeSheet();
+}
+
+function closeSheet() {
+  document.getElementById('register-sheet').style.display = 'none';
+  STATE.farm.pendingCrops = [];
 }
 
 function selectCatTab(idx) {
@@ -106,19 +155,18 @@ function renderCropChips() {
   const cat = CROP_CATEGORIES[selectedCatIdx];
   const chipsEl = document.getElementById('crop-chips');
   if (!chipsEl) return;
+  if (!STATE.farm.pendingCrops) STATE.farm.pendingCrops = [];
 
   const selected = STATE.farm.pendingCrops
-    ? STATE.farm.pendingCrops.filter(c => c.category === cat.id).map(c => c.name)
-    : [];
+    .filter(c => c.category === cat.id).map(c => c.name);
 
   chipsEl.innerHTML = cat.crops.map(name => `
-    <button onclick="toggleCrop('${name}', '${cat.id}', '${cat.badgeClass}')"
-      style="font-size:10px;padding:3px 8px;border-radius:10px;
+    <button onclick="toggleCrop('${name}','${cat.id}','${cat.badgeClass}')"
+      style="font-size:10px;padding:4px 10px;border-radius:10px;cursor:pointer;margin:2px;
              border:0.5px solid ${selected.includes(name) ? '#2E7D32' : '#eee'};
              background:${selected.includes(name) ? '#2E7D32' : 'white'};
              color:${selected.includes(name) ? 'white' : '#666'};
-             font-weight:${selected.includes(name) ? '500' : 'normal'};
-             cursor:pointer;">
+             font-weight:${selected.includes(name) ? '500' : 'normal'};">
       ${name}
     </button>
   `).join('');
@@ -140,110 +188,70 @@ function toggleCrop(name, catId, badgeClass) {
 function renderCropInputs(cat) {
   const inputsEl = document.getElementById('crop-inputs');
   if (!inputsEl) return;
-  if (!STATE.farm.pendingCrops) { inputsEl.innerHTML = ''; return; }
-
-  const catCrops = STATE.farm.pendingCrops.filter(c => c.category === cat.id);
+  const catCrops = (STATE.farm.pendingCrops || []).filter(c => c.category === cat.id);
   if (!catCrops.length) { inputsEl.innerHTML = ''; return; }
 
-  inputsEl.innerHTML = catCrops.map((c, i) => `
-    <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-      <span class="badge ${c.badgeClass}" style="flex-shrink:0;">${c.name}</span>
-      <input type="number" placeholder="면적"
-        value="${c.area}"
-        onchange="updatePendingArea('${c.name}', '${c.category}', this.value)"
-        style="width:60px;padding:4px 6px;font-size:11px;" />
-      <select onchange="updatePendingUnit('${c.name}', '${c.category}', this.value)"
-        style="border:0.5px solid #ddd;border-radius:6px;padding:4px;font-size:10px;color:#666;">
-        <option ${c.unit==='평'?'selected':''}>평</option>
-        <option ${c.unit==='㎡'?'selected':''}>㎡</option>
-      </select>
+  inputsEl.innerHTML = `
+    <div style="background:#f8f8f8;border-radius:8px;padding:10px;">
+      ${catCrops.map(c => `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span class="badge ${c.badgeClass}" style="flex-shrink:0;min-width:44px;text-align:center;">${c.name}</span>
+          <input type="number" placeholder="면적"
+            value="${c.area}"
+            onchange="updatePendingArea('${c.name}','${c.category}',this.value)"
+            style="width:64px;padding:5px 8px;font-size:12px;" />
+          <select onchange="updatePendingUnit('${c.name}','${c.category}',this.value)"
+            style="border:0.5px solid #ddd;border-radius:6px;padding:5px;font-size:11px;color:#666;">
+            <option ${c.unit==='평'?'selected':''}>평</option>
+            <option ${c.unit==='㎡'?'selected':''}>㎡</option>
+          </select>
+        </div>
+      `).join('')}
     </div>
-  `).join('');
+  `;
 }
 
 function updatePendingArea(name, catId, val) {
-  if (!STATE.farm.pendingCrops) return;
-  const c = STATE.farm.pendingCrops.find(c => c.name === name && c.category === catId);
+  const c = (STATE.farm.pendingCrops || []).find(c => c.name === name && c.category === catId);
   if (c) c.area = val;
 }
-
 function updatePendingUnit(name, catId, val) {
-  if (!STATE.farm.pendingCrops) return;
-  const c = STATE.farm.pendingCrops.find(c => c.name === name && c.category === catId);
+  const c = (STATE.farm.pendingCrops || []).find(c => c.name === name && c.category === catId);
   if (c) c.unit = val;
 }
 
-// 선택 버튼 → 경작목록에 추가
 function confirmEntry() {
   const jibun = document.getElementById('jibun-input')?.value.trim();
   if (!jibun) { alert('지번을 입력하세요'); return; }
   if (!STATE.farm.pendingCrops || !STATE.farm.pendingCrops.length) { alert('작물을 선택하세요'); return; }
 
-  // 지번이 없으면 추가
+  if (editingJibun) {
+    STATE.farm.crops = STATE.farm.crops.filter(c => c.jibun !== editingJibun);
+    STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== editingJibun);
+  }
   if (!STATE.farm.lands.find(l => l.jibun === jibun)) {
     STATE.farm.lands.push({ jibun, jimok: '밭' });
   }
-
-  // 작물에 지번 연결 후 저장
   STATE.farm.pendingCrops.forEach(c => {
-    c.jibun = jibun;
-    STATE.farm.crops.push({ ...c });
+    STATE.farm.crops.push({ ...c, jibun });
   });
 
-  // 초기화
   STATE.farm.pendingCrops = [];
-  document.getElementById('jibun-input').value = '';
+  editingJibun = null;
   saveState();
-  renderCropChips();
-  renderCropList();
-  document.getElementById('crop-inputs').innerHTML = '';
+  closeSheet();
+  renderMyFarm();
 }
 
-function renderCropList() {
-  const el = document.getElementById('crop-list');
-  if (!el) return;
-
-  const byLand = {};
-  STATE.farm.crops.forEach(c => {
-    const key = c.jibun || '미지정';
-    if (!byLand[key]) byLand[key] = [];
-    byLand[key].push(c);
-  });
-
-  if (!Object.keys(byLand).length) {
-    el.innerHTML = `<div style="font-size:11px;color:#ccc;text-align:center;padding:12px 0;">경작 목록이 없습니다</div>`;
-    return;
-  }
-
-  el.innerHTML = Object.entries(byLand).map(([jibun, crops], gi) => {
-    const shortJibun = jibun.split(' ').slice(-1)[0];
-    const cropStr = crops.map(c => `${c.name} ${c.area||'?'}${c.unit}`).join(' · ');
-    return `
-      <div style="background:#f8f8f8;border-radius:8px;padding:10px;margin-bottom:8px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:12px;font-weight:500;">${shortJibun}</span>
-          <button onclick="removeLandEntry(${gi})" style="font-size:10px;color:#ccc;border:none;background:none;cursor:pointer;">삭제</button>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;">
-          ${crops.map(c => `<span class="badge ${c.badgeClass||getCropBadgeClass(c.name)}">${c.name} ${c.area||'?'}${c.unit}</span>`).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function removeLandEntry(groupIdx) {
-  const byLand = {};
-  STATE.farm.crops.forEach(c => {
-    const key = c.jibun || '미지정';
-    if (!byLand[key]) byLand[key] = [];
-    byLand[key].push(c);
-  });
-  const jibunToRemove = Object.keys(byLand)[groupIdx];
-  STATE.farm.crops = STATE.farm.crops.filter(c => (c.jibun || '미지정') !== jibunToRemove);
-  STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== jibunToRemove);
+function deleteLandEntry() {
+  if (!editingJibun) return;
+  const name = editingJibun.split(' ').slice(-1)[0];
+  if (!confirm(`${name} 토지를 삭제할까요?`)) return;
+  STATE.farm.crops = STATE.farm.crops.filter(c => c.jibun !== editingJibun);
+  STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== editingJibun);
   saveState();
-  renderCropList();
+  closeSheet();
+  renderMyFarm();
 }
 
 function findByGPS() {
@@ -254,20 +262,12 @@ function findByGPS() {
   }, () => alert('위치를 가져올 수 없습니다.'));
 }
 
-function confirmFarm() {
-  saveState();
-  alert('등록 완료! 오늘의 정보를 확인하세요.');
-  switchTab('today');
-  document.querySelectorAll('.tab-btn')[1].classList.add('active');
-  document.querySelectorAll('.tab-btn')[0].classList.remove('active');
-}
-
+// ════════════════════════════════════════════════════
 // 화면 2 — 오늘의 정보
 // ════════════════════════════════════════════════════
 function renderToday() {
   const el = document.getElementById('screen-today');
   el.innerHTML = `
-    <!-- 날씨 카드 -->
     <div class="card">
       <div class="card-title">
         <span class="ct">날씨</span>
@@ -279,7 +279,6 @@ function renderToday() {
       <div id="weather-week" style="display:flex;gap:4px;"></div>
     </div>
 
-    <!-- 가용자원 카드 -->
     <div class="card">
       <div class="card-title"><span class="ct">가용자원</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -306,7 +305,6 @@ function renderToday() {
       </div>
     </div>
 
-    <!-- 관련기관 카드 -->
     <div class="card">
       <div class="card-title"><span class="ct">관련 기관</span></div>
       ${[
@@ -333,7 +331,6 @@ function renderWork() {
   const el = document.getElementById('screen-work');
   const { year, month } = STATE.calendar;
   el.innerHTML = `
-    <!-- 월력 -->
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <button onclick="prevMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">‹</button>
@@ -343,7 +340,6 @@ function renderWork() {
       ${renderCalendar(year, month)}
     </div>
 
-    <!-- 오늘 작업 -->
     <div class="card" id="work-input-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <span style="font-size:12px;font-weight:500;">오늘 작업</span>
@@ -351,13 +347,12 @@ function renderWork() {
       </div>
       <div id="work-lines">
         <div style="border:0.5px solid #eee;border-radius:8px;padding:10px;color:#ccc;font-size:11px;">
-          월력에서 해당 작업을 선택하세요
+          월력에서 날짜를 선택하세요
         </div>
       </div>
       <button class="btn-primary" id="work-save-btn" onclick="saveWork()" style="margin-top:8px;display:none;">저장</button>
     </div>
 
-    <!-- 평가 -->
     <div class="card" id="eval-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <span style="font-size:12px;font-weight:500;">평가</span>
@@ -390,8 +385,7 @@ function renderCalendar(year, month) {
     const isPast  = new Date(year,month-1,d) < new Date(todayY,todayM-1,todayD);
     const dow = new Date(year, month-1, d).getDay();
     const works = STATE.calendar.works[dateStr] || [];
-    const wIcon = isPast ? '☀️' : '🌤'; // 실제는 API 연동
-
+    const wIcon = isPast ? '☀️' : '🌤';
     cells += `
       <div onclick="selectDate('${dateStr}')"
         style="min-height:44px;padding:2px;border:0.5px dashed #eee;cursor:pointer;${isToday?'background:#F1F8E9;border-color:#2E7D32;':''}">
@@ -413,14 +407,12 @@ function renderCalendar(year, month) {
   }
   cells += '</div>';
 
-  // 범례
   const legend = `
     <div style="display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:0.5px solid #eee;flex-wrap:wrap;align-items:center;">
-      ${STATE.farm.crops.slice(0,4).map(c => `<div style="display:flex;align-items:center;gap:2px;"><span class="badge ${c.badgeClass}" style="font-size:7px;">${c.name}</span></div>`).join('')}
+      ${STATE.farm.crops.slice(0,4).map(c => `<span class="badge ${c.badgeClass}" style="font-size:7px;">${c.name}</span>`).join('')}
       <div style="margin-left:auto;font-size:9px;color:#999;">지난날 기록 · 이후 예보</div>
     </div>
   `;
-
   return dayLabels + cells + legend;
 }
 
@@ -450,13 +442,11 @@ function renderWorkLines() {
   const el = document.getElementById('work-lines');
   const saveBtn = document.getElementById('work-save-btn');
   if (!el) return;
-
   if (!pendingWorks.length) {
-    el.innerHTML = `<div style="border:0.5px solid #eee;border-radius:8px;padding:10px;color:#ccc;font-size:11px;">월력에서 해당 작업을 선택하세요</div>`;
+    el.innerHTML = `<div style="border:0.5px solid #eee;border-radius:8px;padding:10px;color:#ccc;font-size:11px;">월력에서 날짜를 선택하세요</div>`;
     if (saveBtn) saveBtn.style.display = 'none';
     return;
   }
-
   el.innerHTML = pendingWorks.map((w, i) => `
     <div style="display:flex;align-items:center;gap:5px;border:0.5px solid #eee;border-radius:8px;padding:7px 9px;margin-bottom:4px;">
       <span style="font-size:10px;color:#999;flex-shrink:0;">${i+1}.</span>
@@ -473,13 +463,7 @@ function renderWorkLines() {
 
 function addWorkLine() {
   if (!STATE.farm.crops.length) { alert('먼저 내 텃밭에서 작물을 등록하세요'); return; }
-  pendingWorks.push({
-    cropName: STATE.farm.crops[0].name,
-    workType: '기타',
-    detail: '',
-    weather: '☀️',
-    date: selectedWorkDate,
-  });
+  pendingWorks.push({ cropName: STATE.farm.crops[0].name, workType: '기타', detail: '', weather: '☀️', date: selectedWorkDate });
   renderWorkLines();
   document.getElementById('work-save-btn').style.display = 'block';
 }
@@ -516,21 +500,12 @@ function renderEval(dateStr) {
   `).join('');
 }
 
-// 월력 배지 탭 → 작업 입력
-function tapBadge(cropName, workType, dateStr) {
-  selectedWorkDate = dateStr;
-  pendingWorks.push({ cropName, workType, detail: '', weather: '☀️', date: dateStr });
-  renderWorkLines();
-  document.getElementById('work-save-btn').style.display = 'block';
-}
-
 // ════════════════════════════════════════════════════
 // 화면 4 — AI 추천
 // ════════════════════════════════════════════════════
 function renderAI() {
   const el = document.getElementById('screen-ai');
   el.innerHTML = `
-    <!-- AI 추천 카드 -->
     <div class="card">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
         <div style="width:8px;height:8px;border-radius:50%;background:#2E7D32;"></div>
@@ -545,7 +520,6 @@ function renderAI() {
       <button class="btn-outline" onclick="runAI()" style="width:100%;margin-top:8px;">↻ AI 분석 시작</button>
     </div>
 
-    <!-- 기타 카드 -->
     <div class="card">
       <div style="font-size:12px;font-weight:500;margin-bottom:8px;">기타</div>
       ${[
@@ -575,60 +549,46 @@ async function runAI() {
   const timeEl = document.getElementById('ai-time');
   const ctxEl  = document.getElementById('ai-context');
 
-  // 컨텍스트 태그 구성
   const crops = STATE.farm.crops.map(c => c.name).join('·') || '작물 미등록';
   const today = todayStr();
   const todayWorks = STATE.calendar.works[today] || [];
   const workStr = todayWorks.length ? todayWorks.map(w=>w.workType).join('·') : '작업 없음';
 
-  ctxEl.innerHTML = [
-    `☀️ 날씨`, crops, workStr, '서천읍'
-  ].map(t => `<span style="font-size:10px;color:#666;background:#f8f8f8;border-radius:4px;padding:2px 6px;">${t}</span>`).join('');
+  ctxEl.innerHTML = [`☀️ 날씨`, crops, workStr, '서천읍']
+    .map(t => `<span style="font-size:10px;color:#666;background:#f8f8f8;border-radius:4px;padding:2px 6px;">${t}</span>`).join('');
 
   msgEl.textContent = 'AI 분석 중...';
   msgEl.style.color = '#999';
   actEl.innerHTML = '';
 
-  const prompt = `
-당신은 충남 서천군 귀농귀촌인을 위한 농업 도우미입니다.
+  const prompt = `당신은 충남 서천군 귀농귀촌인을 위한 농업 도우미입니다.
 오늘 날짜: ${today}
 등록 작물: ${crops}
 오늘 재배력 작업: ${workStr}
 서천군 병해충 현황: 도열병 주의보 발령 중
-
 위 정보를 바탕으로 오늘 농업 활동에 대한 실용적인 조언을 2~3줄로 간결하게 한국어로 작성해 주세요.
 그리고 가장 필요한 행동 1~2개를 JSON 형식으로 추천해 주세요.
 형식: {"message":"조언내용","actions":[{"label":"버튼명","url":"연결URL"}]}
-URL은 실제 모바일 웹사이트 주소를 사용하세요.
-JSON만 출력하세요.
-  `.trim();
+URL은 실제 모바일 웹사이트 주소를 사용하세요. JSON만 출력하세요.`.trim();
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-        messages: [{ role: 'user', content: prompt }],
-      }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 500, messages: [{ role: 'user', content: prompt }] }),
     });
     const data = await res.json();
     const text = data.content?.map(c => c.text).join('') || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
     msgEl.textContent = parsed.message;
     msgEl.style.color = '#111';
     timeEl.textContent = '방금';
-
     actEl.innerHTML = (parsed.actions || []).map(a => `
       <div class="link-row" onclick="window.open('${a.url}')" style="border:0.5px solid #eee;border-radius:8px;padding:8px 10px;margin-bottom:4px;">
         <div class="link-info"><div class="link-name">${a.label}</div></div>
         <span class="link-arrow" style="color:#2E7D32;">›</span>
       </div>
     `).join('');
-
   } catch(e) {
     msgEl.textContent = 'AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
     msgEl.style.color = '#999';
