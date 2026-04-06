@@ -116,28 +116,36 @@ function initKakaoMap() {
   const container = document.getElementById('kakao-map');
   if (!container || !window.kakao) return;
 
-  const options = {
-    center: new kakao.maps.LatLng(36.0776, 126.6914), // 서천군 중심
-    level: 5,
-  };
-  kakaoMap = new kakao.maps.Map(container, options);
-  kakaoGeocoder = new kakao.maps.services.Geocoder();
-  kakaoMarker = new kakao.maps.Marker();
+  kakao.maps.load(() => {
+    // 이미 초기화된 경우 relayout만
+    if (kakaoMap) {
+      kakaoMap.relayout();
+      return;
+    }
 
-  // 지도 클릭 시 좌표 → 주소 변환
-  kakao.maps.event.addListener(kakaoMap, 'click', function(mouseEvent) {
-    const latlng = mouseEvent.latLng;
-    kakaoGeocoder.coord2Address(latlng.getLng(), latlng.getLat(), function(result, status) {
-      if (status === kakao.maps.services.Status.OK) {
-        const addr = result[0].road_address
-          ? result[0].road_address.address_name
-          : result[0].address.address_name;
-        document.getElementById('jibun-input').value = addr;
-        kakaoMarker.setPosition(latlng);
-        kakaoMarker.setMap(kakaoMap);
-      }
+    const options = {
+      center: new kakao.maps.LatLng(36.0776, 126.6914),
+      level: 5,
+    };
+    kakaoMap = new kakao.maps.Map(container, options);
+    kakaoGeocoder = new kakao.maps.services.Geocoder();
+    kakaoMarker = new kakao.maps.Marker();
+
+    // 지도 클릭 시 좌표 → 주소 변환
+    kakao.maps.event.addListener(kakaoMap, 'click', function(mouseEvent) {
+      const latlng = mouseEvent.latLng;
+      kakaoGeocoder.coord2Address(latlng.getLng(), latlng.getLat(), function(result, status) {
+        if (status === kakao.maps.services.Status.OK) {
+          const addr = result[0].road_address
+            ? result[0].road_address.address_name
+            : result[0].address.address_name;
+          document.getElementById('jibun-input').value = addr;
+          kakaoMarker.setPosition(latlng);
+          kakaoMarker.setMap(kakaoMap);
+        }
+      });
     });
-  });
+  }); // kakao.maps.load 끝
 }
 
 function searchAddress() {
@@ -167,7 +175,7 @@ function openRegisterSheet() {
   document.getElementById('jibun-input').value = '';
   document.getElementById('register-sheet').style.display = 'block';
   selectCatTab(0);
-  setTimeout(() => initKakaoMap(), 100);
+  setTimeout(() => initKakaoMap(), 300);
 }
 
 function openEditSheet(jibun) {
