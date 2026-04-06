@@ -29,7 +29,7 @@ body {
 .screens-wrapper { flex: 1; min-height: 0; position: relative; overflow: hidden; }
 .screen { display: none; position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; padding-bottom: 24px; background: #f8f8f8; }
 .screen.active { display: block; }
-.tabbar { display: flex; background: white; border-top: 0.5px solid #eee; flex-shrink: 0; }
+.tabbar { display: flex; background: white; border-top: 0.5px solid #eee; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom, 8px); }
 .tab-btn { flex: 1; text-align: center; padding: 8px 4px 6px; cursor: pointer; background: none; border: none; }
 .tab-icon { font-size: 20px; display: block; }
 .tab-label { font-size: 9px; color: #999; margin-top: 2px; display: block; }
