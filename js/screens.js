@@ -20,8 +20,8 @@ function renderMyFarm() {
     </div>
 
     <!-- 등록/수정 시트 -->
-    <div id="register-sheet" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.4);" onclick="closeSheetOutside(event)">
-      <div id="sheet-body" style="position:absolute;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 40px;">
+    <div id="register-sheet" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(0,0,0,0.4);" onclick="closeSheetOutside(event)">
+      <div id="sheet-body" style="position:absolute;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;max-height:80%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 40px;">
         <div style="width:36px;height:4px;background:#eee;border-radius:2px;margin:0 auto 16px;"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <span style="font-size:15px;font-weight:500;" id="sheet-title">텃밭 등록</span>
