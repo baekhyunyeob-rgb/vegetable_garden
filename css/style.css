@@ -1,5 +1,3 @@
-/* ── 기본 리셋 ─────────────────────────────────── */
-* { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; -webkit-overflow-scrolling: touch; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
@@ -12,11 +10,11 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   background: white;
   position: relative;
-  overflow: clip;
 }
 .app-header {
   display: flex;
@@ -28,7 +26,8 @@ body {
 }
 .app-header h1 { font-size: 18px; font-weight: 500; color: #111; }
 .app-header .header-sub { font-size: 11px; color: #999; }
-.screen { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; padding-bottom: 24px; background: #f8f8f8; }
+.screens-wrapper { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.screen { display: none; position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; padding-bottom: 24px; background: #f8f8f8; }
 .screen.active { display: block; }
 .tabbar { display: flex; background: white; border-top: 0.5px solid #eee; flex-shrink: 0; }
 .tab-btn { flex: 1; text-align: center; padding: 8px 4px 6px; cursor: pointer; background: none; border: none; }
