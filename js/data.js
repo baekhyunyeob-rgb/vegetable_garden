@@ -5,6 +5,7 @@ const STATE = {
     lands: [],      // [{jibun, jimok}]
     crops: [],      // [{jibun, category, name, area, unit}]
     pendingCrops: [], // 현재 입력 중인 작물 (임시)
+    currentParcel: null, // 현재 조회된 필지 정보
   },
   calendar: {       // 농작업 데이터
     year: new Date().getFullYear(),

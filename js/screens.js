@@ -40,6 +40,7 @@ function renderMyFarm() {
             <button onclick="findByGPS()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;flex-shrink:0;width:100%;">📡 GPS로 현재 위치 찾기</button>
           </div>
           <div style="font-size:10px;color:#bbb;margin-top:4px;">지번을 모르면 GPS 버튼을 눌러주세요</div>
+          <div id="parcel-info" style="margin-top:6px;"></div>
         </div>
 
         <div style="font-size:11px;color:#999;margin-bottom:6px;">🌿 작물 선택</div>
@@ -161,10 +162,106 @@ function searchAddress() {
       kakaoMarker.setPosition(coords);
       kakaoMarker.setMap(kakaoMap);
       document.getElementById('jibun-input').value = result[0].address_name;
+      // 브이월드로 필지 정보 자동 조회
+      fetchParcelInfo(result[0].address_name);
     } else {
       alert('주소를 찾을 수 없어요. 더 자세히 입력해보세요.');
     }
   });
+}
+
+// 브이월드 필지 정보 조회
+async function fetchParcelInfo(address) {
+  const infoEl = document.getElementById('parcel-info');
+  if (!infoEl) return;
+  infoEl.innerHTML = `<span style="font-size:10px;color:#999;">토지 정보 조회 중...</span>`;
+
+  try {
+    // 1단계: 주소 → PNU + 좌표
+    const geoRes = await fetch(`/api/vworld?action=geocode&address=${encodeURIComponent(address)}`);
+    const geoData = await geoRes.json();
+
+    if (geoData.response?.status !== 'OK') {
+      infoEl.innerHTML = `<span style="font-size:10px;color:#ccc;">토지 정보를 찾을 수 없어요</span>`;
+      return;
+    }
+
+    const pnu = geoData.response.refined.structure.level4LC;
+    const bonbun = geoData.response.refined.structure.level5;
+
+    // PNU + 본번으로 19자리 PNU 구성
+    const fullPnu = pnu + '1' + bonbun.padStart(4,'0') + '0000';
+
+    // 2단계: 토지특성정보 (면적, 지목, 용도지역)
+    const landRes = await fetch(`/api/vworld?action=landinfo&pnu=${fullPnu}`);
+    const landData = await landRes.json();
+    const fields = landData.landCharacteristicss?.field;
+
+    if (!fields || !fields.length) {
+      infoEl.innerHTML = `<span style="font-size:10px;color:#ccc;">토지 정보 없음</span>`;
+      return;
+    }
+
+    // 가장 최근 연도 데이터
+    const latest = fields.sort((a,b) => b.stdrYear - a.stdrYear)[0];
+    const areaM2 = parseFloat(latest.lndpclAr);
+    const areaPyeong = Math.round(areaM2 / 3.306);
+    const jimok = latest.lndcgrCodeNm;
+    const yongdo = latest.prposArea1Nm;
+    const jiga = parseInt(latest.pblntfPclnd).toLocaleString();
+
+    // STATE에 토지 정보 저장
+    STATE.farm.currentParcel = { pnu: fullPnu, areaM2, areaPyeong, jimok, yongdo, jiga };
+
+    infoEl.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+        <div style="background:#EAF3DE;border-radius:6px;padding:5px 10px;font-size:11px;">
+          <span style="color:#999;font-size:10px;">면적 </span>
+          <span style="color:#27500A;font-weight:500;">${areaM2}㎡ (약 ${areaPyeong}평)</span>
+        </div>
+        <div style="background:#EAF3DE;border-radius:6px;padding:5px 10px;font-size:11px;">
+          <span style="color:#999;font-size:10px;">지목 </span>
+          <span style="color:#27500A;font-weight:500;">${jimok}</span>
+        </div>
+        <div style="background:#EAF3DE;border-radius:6px;padding:5px 10px;font-size:11px;">
+          <span style="color:#999;font-size:10px;">용도 </span>
+          <span style="color:#27500A;font-weight:500;">${yongdo}</span>
+        </div>
+        <div style="background:#f8f8f8;border-radius:6px;padding:5px 10px;font-size:11px;">
+          <span style="color:#999;font-size:10px;">공시지가 </span>
+          <span style="color:#111;font-weight:500;">${jiga}원/㎡</span>
+        </div>
+      </div>
+    `;
+
+    // 3단계: 필지 경계선 카카오맵에 표시
+    const parcelRes = await fetch(`/api/vworld?action=parcel&pnu=${fullPnu}`);
+    const parcelData = await parcelRes.json();
+    const features = parcelData.response?.result?.featureCollection?.features;
+    if (features && features.length && kakaoMap) {
+      drawParcelBoundary(features[0].geometry.coordinates);
+    }
+
+  } catch(e) {
+    console.error('필지 정보 조회 오류:', e);
+    infoEl.innerHTML = `<span style="font-size:10px;color:#ccc;">토지 정보 조회 실패</span>`;
+  }
+}
+
+// 카카오맵에 필지 경계선 그리기
+let parcelPolygon = null;
+function drawParcelBoundary(coordinates) {
+  if (parcelPolygon) parcelPolygon.setMap(null);
+  const path = coordinates[0][0].map(c => new kakao.maps.LatLng(c[1], c[0]));
+  parcelPolygon = new kakao.maps.Polygon({
+    path,
+    strokeWeight: 2,
+    strokeColor: '#2E7D32',
+    strokeOpacity: 0.9,
+    fillColor: '#4CAF50',
+    fillOpacity: 0.2,
+  });
+  parcelPolygon.setMap(kakaoMap);
 }
 
 function openRegisterSheet() {
