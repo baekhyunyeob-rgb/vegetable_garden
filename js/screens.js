@@ -86,22 +86,23 @@ function renderFarmListHTML() {
   });
 
   return Object.entries(byLand).map(([jibun, crops]) => {
-    const shortJibun = jibun.split(' ').slice(-2).join(' ');
+    const shortJibun = jibun === '미지정' ? '미지정' : jibun.split(' ').slice(-2).join(' ');
     const totalArea = crops.reduce((s, c) => s + (parseFloat(c.area) || 0), 0);
     const unit = crops[0]?.unit || '평';
     return `
-      <div onclick="openEditSheet('${jibun}')"
-        style="background:white;border:0.5px solid #eee;border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;">
+      <div style="background:white;border:0.5px solid #eee;border-radius:12px;padding:12px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <span style="font-size:13px;font-weight:500;color:#111;">${shortJibun}</span>
-          <span style="font-size:11px;color:#999;">총 ${totalArea}${unit}</span>
+          <span onclick="openEditSheet('${jibun}')" style="font-size:13px;font-weight:500;color:#111;cursor:pointer;flex:1;">${shortJibun}</span>
+          <span style="font-size:11px;color:#999;margin-right:8px;">총 ${totalArea}${unit}</span>
+          <button onclick="removeByJibun('${jibun}')" style="font-size:11px;color:#E24B4A;border:0.5px solid #E24B4A;border-radius:5px;padding:2px 8px;background:white;cursor:pointer;">삭제</button>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+        <div style="display:flex;flex-wrap:wrap;gap:4px;" onclick="openEditSheet('${jibun}')" style="cursor:pointer;">
           ${crops.map(c => `
             <span class="badge ${c.badgeClass || getCropBadgeClass(c.name)}">
               ${c.name} ${c.area || '?'}${c.unit || '평'}
             </span>
           `).join('')}
+        </div>
         </div>
       </div>
     `;
@@ -415,6 +416,14 @@ function confirmEntry() {
   editingJibun = null;
   saveState();
   closeSheet();
+  renderMyFarm();
+}
+
+function removeByJibun(jibun) {
+  if (!confirm(`${jibun.split(' ').slice(-2).join(' ')} 토지를 삭제할까요?`)) return;
+  STATE.farm.crops = STATE.farm.crops.filter(c => (c.jibun || '미지정') !== jibun);
+  STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== jibun);
+  saveState();
   renderMyFarm();
 }
 
