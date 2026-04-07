@@ -119,11 +119,10 @@ function initKakaoMap() {
   if (!container || !window.kakao) return;
 
   kakao.maps.load(() => {
-    // 이미 초기화된 경우 relayout만
-    if (kakaoMap) {
-      kakaoMap.relayout();
-      return;
-    }
+    // 항상 새로 초기화 (시트가 닫혔다 열리면 컨테이너가 새로 생성됨)
+    kakaoMap = null;
+    kakaoMarker = null;
+    parcelPolygon = null;
 
     const options = {
       center: new kakao.maps.LatLng(36.0776, 126.6914),

@@ -1,40 +1,28 @@
-export const config = { runtime: 'edge' };
-
-export default async function handler(req) {
-  const { searchParams } = new URL(req.url);
-  const action = searchParams.get('action');
-  const address = searchParams.get('address') || '';
-  const pnu = searchParams.get('pnu') || '';
-
+export default async function handler(req, res) {
+  const { action, address, pnu } = req.query;
   const KEY = process.env.VWORLD_API_KEY;
-  const DOMAIN = 'https://kitchen-garden.vercel.app';
 
-  const cors = {
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json;charset=utf-8',
-  };
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'application/json;charset=utf-8');
 
   try {
     let url = '';
 
     if (action === 'geocode') {
       url = `https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=parcel&key=${KEY}`;
-
     } else if (action === 'parcel') {
       url = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${KEY}&attrFilter=pnu:=:${pnu}&format=json`;
-
     } else if (action === 'landinfo') {
       url = `https://api.vworld.kr/ned/data/getLandCharacteristics?key=${KEY}&pnu=${pnu}&format=json&numOfRows=1&pageNo=1`;
-
     } else {
-      return new Response(JSON.stringify({ error: 'invalid action' }), { status: 400, headers: cors });
+      return res.status(400).json({ error: 'invalid action' });
     }
 
-    const res = await fetch(url);
-    const data = await res.json();
-    return new Response(JSON.stringify(data), { headers: cors });
+    const response = await fetch(url);
+    const data = await response.json();
+    return res.status(200).json(data);
 
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors });
+    return res.status(500).json({ error: e.message });
   }
 }
