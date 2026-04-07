@@ -176,9 +176,11 @@ async function fetchParcelInfo(address) {
   if (!infoEl) return;
   infoEl.innerHTML = `<span style="font-size:10px;color:#999;">토지 정보 조회 중...</span>`;
 
+  const KEY = 'DFFEFE4F-4658-3690-98E8-5CE7D97D26C1';
+
   try {
     // 1단계: 주소 → PNU + 좌표
-    const geoRes = await fetch(`/api/vworld?action=geocode&address=${encodeURIComponent(address)}`);
+    const geoRes = await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=parcel&key=${KEY}`);
     const geoData = await geoRes.json();
 
     if (geoData.response?.status !== 'OK') {
@@ -193,7 +195,7 @@ async function fetchParcelInfo(address) {
     const fullPnu = pnu + '1' + bonbun.padStart(4,'0') + '0000';
 
     // 2단계: 토지특성정보 (면적, 지목, 용도지역)
-    const landRes = await fetch(`/api/vworld?action=landinfo&pnu=${fullPnu}`);
+    const landRes = await fetch(`https://api.vworld.kr/ned/data/getLandCharacteristics?key=${KEY}&pnu=${fullPnu}&format=json&numOfRows=1&pageNo=1`);
     const landData = await landRes.json();
     const fields = landData.landCharacteristicss?.field;
 
@@ -235,7 +237,7 @@ async function fetchParcelInfo(address) {
     `;
 
     // 3단계: 필지 경계선 카카오맵에 표시
-    const parcelRes = await fetch(`/api/vworld?action=parcel&pnu=${fullPnu}`);
+    const parcelRes = await fetch(`https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${KEY}&attrFilter=pnu:=:${fullPnu}&format=json`);
     const parcelData = await parcelRes.json();
     const features = parcelData.response?.result?.featureCollection?.features;
     if (features && features.length && kakaoMap) {
