@@ -1,5 +1,5 @@
-const CACHE = 'textbat-v1';
-const ASSETS = ['/', '/index.html', '/css/style.css', '/js/app.js', '/js/data.js', '/js/ui.js'];
+const CACHE = 'textbat-v3';
+const ASSETS = ['/', '/index.html', '/css/style.css', '/js/app.js', '/js/data.js', '/js/screens.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -14,6 +14,10 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // API 요청은 캐시 안 함
+  if (e.request.url.includes('/api/') || e.request.url.includes('vworld.kr') || e.request.url.includes('kakao')) {
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
