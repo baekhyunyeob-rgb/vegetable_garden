@@ -1,4 +1,4 @@
-const CACHE = 'textbat-v3';
+const CACHE = 'textbat-v4';
 const ASSETS = ['/', '/index.html', '/css/style.css', '/js/app.js', '/js/data.js', '/js/screens.js'];
 
 self.addEventListener('install', e => {
@@ -14,8 +14,10 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // API 요청은 캐시 안 함
-  if (e.request.url.includes('/api/') || e.request.url.includes('vworld.kr') || e.request.url.includes('kakao')) {
+  if (e.request.url.includes('/api/') || 
+      e.request.url.includes('vworld.kr') || 
+      e.request.url.includes('kakao') ||
+      e.request.url.includes('anthropic')) {
     return;
   }
   e.respondWith(

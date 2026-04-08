@@ -5,6 +5,10 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json;charset=utf-8');
 
+  if (!KEY) {
+    return res.status(500).json({ error: 'API key not configured' });
+  }
+
   try {
     let url = '';
 
@@ -18,11 +22,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'invalid action' });
     }
 
+    console.log('Fetching URL:', url);
+
     const response = await fetch(url);
-    const data = await response.json();
-    return res.status(200).json(data);
+    const text = await response.text();
+
+    console.log('Response status:', response.status);
+    console.log('Response text:', text.substring(0, 200));
+
+    try {
+      const data = JSON.parse(text);
+      return res.status(200).json(data);
+    } catch(parseErr) {
+      return res.status(500).json({ error: 'Parse failed', raw: text.substring(0, 500) });
+    }
 
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error('Fetch error:', e);
+    return res.status(500).json({ error: e.message, stack: e.stack });
   }
 }

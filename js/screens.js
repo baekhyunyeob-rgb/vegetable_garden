@@ -96,13 +96,12 @@ function renderFarmListHTML() {
           <span style="font-size:11px;color:#999;margin-right:8px;">총 ${totalArea}${unit}</span>
           <button onclick="removeByJibun('${jibun}')" style="font-size:11px;color:#E24B4A;border:0.5px solid #E24B4A;border-radius:5px;padding:2px 8px;background:white;cursor:pointer;">삭제</button>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;" onclick="openEditSheet('${jibun}')" style="cursor:pointer;">
+        <div style="display:flex;flex-wrap:wrap;gap:4px;cursor:pointer;" onclick="openEditSheet('${jibun}')">
           ${crops.map(c => `
             <span class="badge ${c.badgeClass || getCropBadgeClass(c.name)}">
               ${c.name} ${c.area || '?'}${c.unit || '평'}
             </span>
           `).join('')}
-        </div>
         </div>
       </div>
     `;
@@ -480,7 +479,7 @@ function renderToday() {
       <div id="weather-today" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:10px;border-bottom:0.5px solid #eee;">
         <div style="font-size:13px;color:#999;">날씨 정보 로딩 중...</div>
       </div>
-      <div id="weather-week" style="display:flex;gap:4px;"></div>
+      <div id="weather-week" style="display:flex;gap:4px;overflow-x:auto;"></div>
     </div>
 
     <div class="card">
@@ -567,6 +566,99 @@ function renderWork() {
       </div>
     </div>
   `;
+  loadWeather();
+}
+
+function getWeatherIcon(sky, pty) {
+  if (pty === '1') return '🌧';
+  if (pty === '2') return '🌨';
+  if (pty === '3') return '❄️';
+  if (sky === '1') return '☀️';
+  if (sky === '3') return '⛅';
+  if (sky === '4') return '☁️';
+  return '🌤';
+}
+
+async function loadWeather() {
+  const KEY = '58b48b0d19a525cf18e98d85a1b68cc560700393a7ed41f7538cc0758386b039';
+  const nx = 54, ny = 89;
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  let yyyy = now.getFullYear();
+  let mm = pad(now.getMonth()+1);
+  let dd = pad(now.getDate());
+  let baseDate = `${yyyy}${mm}${dd}`;
+  const hours = now.getHours();
+  const baseTimes = [2,5,8,11,14,17,20,23];
+  let baseHour = baseTimes.filter(h => h <= hours).pop();
+  if (baseHour === undefined) {
+    const yesterday = new Date(now - 86400000);
+    yyyy = yesterday.getFullYear();
+    mm = pad(yesterday.getMonth()+1);
+    dd = pad(yesterday.getDate());
+    baseDate = `${yyyy}${mm}${dd}`;
+    baseHour = 23;
+  }
+  const baseTime = pad(baseHour) + '00';
+
+  try {
+    const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${KEY}&numOfRows=500&pageNo=1&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${nx}&ny=${ny}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const items = data.response.body.items.item;
+
+    const byTime = {};
+    items.forEach(item => {
+      const key = item.fcstDate + item.fcstTime;
+      if (!byTime[key]) byTime[key] = { date: item.fcstDate, time: item.fcstTime };
+      byTime[key][item.category] = item.fcstValue;
+    });
+    const slots = Object.values(byTime).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+    const nowStr = baseDate + pad(hours) + '00';
+    const current = slots.find(s => s.date+s.time >= nowStr) || slots[0];
+
+    if (current) {
+      const icon = getWeatherIcon(current.SKY, current.PTY);
+      const tmp = current.TMP || '--';
+      const pop = current.POP || '0';
+      const wsd = current.WSD || '--';
+      const h = String(current.time).slice(0,2);
+      document.getElementById('weather-today').innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:36px;">${icon}</span>
+          <div>
+            <div style="font-size:22px;font-weight:600;color:#111;">${tmp}°C</div>
+            <div style="font-size:11px;color:#999;">강수확률 ${pop}% · 풍속 ${wsd}m/s</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:#999;">서천군</div>
+          <div style="font-size:10px;color:#999;">${h}시 기준</div>
+        </div>
+      `;
+    }
+
+    const todaySlots = slots.filter(s => s.date === baseDate && s.time.endsWith('00'));
+    const weekEl = document.getElementById('weather-week');
+    if (weekEl) {
+      weekEl.innerHTML = todaySlots.slice(0,8).map(s => {
+        const icon = getWeatherIcon(s.SKY, s.PTY);
+        const h = String(s.time).slice(0,2);
+        return `
+          <div style="flex:0 0 auto;text-align:center;padding:6px 8px;background:#f8f8f8;border-radius:8px;min-width:44px;">
+            <div style="font-size:9px;color:#999;">${h}시</div>
+            <div style="font-size:18px;margin:2px 0;">${icon}</div>
+            <div style="font-size:10px;font-weight:500;">${s.TMP||'--'}°</div>
+            <div style="font-size:8px;color:#378ADD;">${s.POP||'0'}%</div>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch(e) {
+    console.error('날씨 로딩 오류:', e);
+    const el = document.getElementById('weather-today');
+    if (el) el.innerHTML = '<div style="font-size:12px;color:#ccc;">날씨 정보를 불러올 수 없어요</div>';
+  }
 }
 
 function renderCalendar(year, month) {
