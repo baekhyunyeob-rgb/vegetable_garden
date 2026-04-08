@@ -638,27 +638,98 @@ async function loadWeather() {
       `;
     }
 
-    const todaySlots = slots.filter(s => s.date === baseDate && s.time.endsWith('00'));
+    // 6시간 간격 슬롯 필터링 (00, 06, 12, 18시)
+    const graphSlots = slots.filter(s => ['0000','0600','1200','1800'].includes(s.time));
     const weekEl = document.getElementById('weather-week');
-    if (weekEl) {
-      weekEl.innerHTML = todaySlots.slice(0,8).map(s => {
-        const icon = getWeatherIcon(s.SKY, s.PTY);
-        const h = String(s.time).slice(0,2);
-        return `
-          <div style="flex:0 0 auto;text-align:center;padding:6px 8px;background:#f8f8f8;border-radius:8px;min-width:44px;">
-            <div style="font-size:9px;color:#999;">${h}시</div>
-            <div style="font-size:18px;margin:2px 0;">${icon}</div>
-            <div style="font-size:10px;font-weight:500;">${s.TMP||'--'}°</div>
-            <div style="font-size:8px;color:#378ADD;">${s.POP||'0'}%</div>
-          </div>
-        `;
-      }).join('');
+    if (weekEl && graphSlots.length > 0) {
+      renderWeatherGraph(weekEl, graphSlots);
     }
   } catch(e) {
     console.error('날씨 로딩 오류:', e);
     const el = document.getElementById('weather-today');
     if (el) el.innerHTML = '<div style="font-size:12px;color:#ccc;">날씨 정보를 불러올 수 없어요</div>';
   }
+}
+
+
+function renderWeatherGraph(el, slots) {
+  const temps = slots.map(s => parseFloat(s.TMP) || 0);
+  const minT = Math.min(...temps) - 2;
+  const maxT = Math.max(...temps) + 2;
+  const range = maxT - minT || 1;
+
+  const W = 320, H = 100, padL = 24, padR = 8, padT = 10, padB = 30;
+  const gW = W - padL - padR;
+  const gH = H - padT - padB;
+  const n = slots.length;
+  const xStep = gW / (n - 1);
+
+  const xPos = (i) => padL + i * xStep;
+  const yPos = (t) => padT + gH - ((t - minT) / range) * gH;
+
+  // 선 path
+  const linePath = slots.map((s, i) => {
+    const x = xPos(i);
+    const y = yPos(parseFloat(s.TMP) || 0);
+    return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+
+  // 채우기 path
+  const fillPath = linePath
+    + ' L' + xPos(n-1).toFixed(1) + ',' + (padT+gH)
+    + ' L' + padL.toFixed(1) + ',' + (padT+gH) + ' Z';
+
+  // 날짜 구분선
+  let dateDividers = '';
+  let prevDate = '';
+  slots.forEach((s, i) => {
+    if (s.date !== prevDate && i > 0) {
+      const x = xPos(i).toFixed(1);
+      dateDividers += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+gH}" stroke="#eee" stroke-width="1" stroke-dasharray="3,2"/>`;
+    }
+    prevDate = s.date;
+  });
+
+  // 포인트 + 아이콘 + 라벨
+  let points = '', labels = '', icons = '';
+  slots.forEach((s, i) => {
+    const x = xPos(i);
+    const y = yPos(parseFloat(s.TMP) || 0);
+    const h = String(s.time).slice(0,2);
+    const icon = getWeatherIcon(s.SKY, s.PTY);
+    const pop = parseInt(s.POP || 0);
+    const isNewDay = i === 0 || s.date !== slots[i-1].date;
+    const mm = s.date.slice(4,6), dd = s.date.slice(6,8);
+    const label = isNewDay ? `${parseInt(mm)}/${parseInt(dd)}` : `${parseInt(h)}시`;
+    const popColor = pop >= 60 ? '#378ADD' : pop >= 30 ? '#7BB8E8' : '#ccc';
+
+    points += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#2E7D32"/>`;
+    icons += `<text x="${x.toFixed(1)}" y="${(padT-2).toFixed(1)}" text-anchor="middle" font-size="12">${icon}</text>`;
+    labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+12).toFixed(1)}" text-anchor="middle" font-size="8" fill="#999">${label}</text>`;
+    labels += `<text x="${x.toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="8" fill="#2E7D32">${(parseFloat(s.TMP)||0).toFixed(0)}°</text>`;
+    if (pop > 0) {
+      labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+22).toFixed(1)}" text-anchor="middle" font-size="7" fill="${popColor}">${pop}%</text>`;
+    }
+  });
+
+  el.innerHTML = `
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;">
+        <defs>
+          <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4CAF50" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#4CAF50" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        ${dateDividers}
+        <path d="${fillPath}" fill="url(#tempGrad)"/>
+        <path d="${linePath}" fill="none" stroke="#2E7D32" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${icons}
+        ${points}
+        ${labels}
+      </svg>
+    </div>
+  `;
 }
 
 function renderCalendar(year, month) {
