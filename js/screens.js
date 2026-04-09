@@ -21,7 +21,7 @@ function renderMyFarm() {
 
     <!-- 등록/수정 시트 -->
     <div id="register-sheet" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(0,0,0,0.4);" onclick="closeSheetOutside(event)">
-      <div id="sheet-body" style="position:absolute;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;max-height:80%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 40px;">
+      <div id="sheet-body" style="position:absolute;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;max-height:80%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 40px;transition:transform 0.3s ease;transform:translateY(0);">
         <div style="width:36px;height:4px;background:#eee;border-radius:2px;margin:0 auto 16px;"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <span style="font-size:15px;font-weight:500;" id="sheet-title">텃밭 등록</span>
@@ -320,20 +320,48 @@ function initSheetSwipe() {
   const sheetBody = document.getElementById('sheet-body');
   if (!sheetBody) return;
 
-  let startY = 0;
-  let startScrollTop = 0;
+  // 이전 이벤트 제거를 위해 복제
+  const newBody = sheetBody.cloneNode(true);
+  sheetBody.parentNode.replaceChild(newBody, sheetBody);
+  const el = document.getElementById('sheet-body');
 
-  sheetBody.addEventListener('touchstart', function(e) {
+  let startY = 0;
+  let currentY = 0;
+  let startScrollTop = 0;
+  let dragging = false;
+
+  el.addEventListener('touchstart', function(e) {
     startY = e.touches[0].clientY;
-    startScrollTop = sheetBody.scrollTop;
+    startScrollTop = el.scrollTop;
+    dragging = true;
+    el.style.transition = 'none';
   }, { passive: true });
 
-  sheetBody.addEventListener('touchend', function(e) {
-    const endY = e.changedTouches[0].clientY;
-    const diff = endY - startY;
-    // 위에서 아래로 50px 이상 스와이프 + 스크롤이 맨 위일 때
-    if (diff > 50 && startScrollTop === 0) {
-      closeSheet();
+  el.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+    // 스크롤이 맨 위이고 아래로 드래그할 때만 따라옴
+    if (diff > 0 && startScrollTop === 0) {
+      el.style.transform = 'translateY(' + diff + 'px)';
+    }
+  }, { passive: true });
+
+  el.addEventListener('touchend', function(e) {
+    if (!dragging) return;
+    dragging = false;
+    const diff = currentY - startY;
+    el.style.transition = 'transform 0.3s ease';
+    if (diff > 80 && startScrollTop === 0) {
+      // 80px 이상 내리면 닫기
+      el.style.transform = 'translateY(100%)';
+      setTimeout(function() {
+        closeSheet();
+        el.style.transform = 'translateY(0)';
+      }, 300);
+    } else {
+      // 원위치
+      el.style.transform = 'translateY(0)';
     }
   }, { passive: true });
 }
