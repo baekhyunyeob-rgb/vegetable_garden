@@ -271,7 +271,7 @@ function openRegisterSheet() {
   document.getElementById('jibun-input').value = '';
   document.getElementById('register-sheet').style.display = 'block';
   selectCatTab(0);
-  setTimeout(() => initKakaoMap(), 300);
+  setTimeout(() => { initKakaoMap(); initSheetSwipe(); }, 300);
 }
 
 function openEditSheet(jibun) {
@@ -283,6 +283,7 @@ function openEditSheet(jibun) {
   document.getElementById('sheet-delete-btn').style.display = 'block';
   document.getElementById('jibun-input').value = jibun;
   document.getElementById('register-sheet').style.display = 'block';
+  initSheetSwipe();
 
   setTimeout(() => {
     initKakaoMap();
@@ -312,6 +313,29 @@ function closeSheetOutside(e) {
 function closeSheet() {
   document.getElementById('register-sheet').style.display = 'none';
   STATE.farm.pendingCrops = [];
+}
+
+// 바텀시트 스와이프 닫기
+function initSheetSwipe() {
+  const sheetBody = document.getElementById('sheet-body');
+  if (!sheetBody) return;
+
+  let startY = 0;
+  let startScrollTop = 0;
+
+  sheetBody.addEventListener('touchstart', function(e) {
+    startY = e.touches[0].clientY;
+    startScrollTop = sheetBody.scrollTop;
+  }, { passive: true });
+
+  sheetBody.addEventListener('touchend', function(e) {
+    const endY = e.changedTouches[0].clientY;
+    const diff = endY - startY;
+    // 위에서 아래로 50px 이상 스와이프 + 스크롤이 맨 위일 때
+    if (diff > 50 && startScrollTop === 0) {
+      closeSheet();
+    }
+  }, { passive: true });
 }
 
 function selectCatTab(idx) {
