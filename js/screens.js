@@ -936,7 +936,7 @@ function renderAI() {
         </div>
       `).join('')}
     </div>
-  \`;
+  `;
 
   if (myCrops.length > 0) showNongsaroInfo(myCrops[0], 0);
 }
@@ -993,7 +993,7 @@ function renderFileOnlySection(fileInfo) {
   return '<div style="background:#EAF3DE;border-radius:8px;padding:12px;">' +
     '<div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:6px;">📥 ' + fileInfo.key + ' 농작업 일정</div>' +
     '<div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.6;">파종·시비·수확 등 월별 농작업 일정을<br>파일로 다운로드해서 확인할 수 있어요.</div>' +
-    '<button onclick="window.open('' + getFileDownloadUrl(fileInfo.no) + '')" ' +
+    '<button onclick="window.open(\'' + getFileDownloadUrl(fileInfo.no) + '\')" ' +
     'style="width:100%;padding:9px;background:#2E7D32;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:500;">' +
     '📥 농작업일정 (' + fileInfo.ext.toUpperCase() + ') 다운로드</button>' +
     '<div style="font-size:10px;color:#999;margin-top:6px;text-align:center;">한글뷰어 또는 PDF 앱 필요</div></div>';
@@ -1036,7 +1036,7 @@ async function fetchApiSection(cropName) {
   return '<div style="background:#EAF3DE;border-radius:8px;padding:12px;">' +
     '<div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:8px;">📖 ' + title.trim() + ' 재배 정보</div>' +
     '<div style="font-size:11px;color:#444;line-height:1.9;white-space:pre-wrap;">' + preview + (fullText.length > 400 ? '...' : '') + '</div>' +
-    '<button onclick="window.open('https://www.nongsaro.go.kr/portal/ps/psb/psbk/fildMnfctDtl.ps?cntntsNo=' + cntntsNo + '')" ' +
+    '<button onclick="window.open(\'https://www.nongsaro.go.kr/portal/ps/psb/psbk/fildMnfctDtl.ps?cntntsNo=' + cntntsNo + '\')\" ' +
     'style="width:100%;margin-top:10px;padding:8px;background:white;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:8px;font-size:11px;cursor:pointer;">' +
     '농사로에서 전체 보기 ›</button></div>';
 }
@@ -1080,7 +1080,8 @@ async function runAI() {
     });
     const data = await res.json();
     const text = data.content?.map(c => c.text).join('') || '';
-    const cleaned = text.replace(/\x60\x60\x60json/g, '').replace(/\x60\x60\x60/g, '').trim();
+    const bt = String.fromCharCode(96);
+    const cleaned = text.replace(new RegExp(bt+bt+bt+'json','g'), '').replace(new RegExp(bt+bt+bt,'g'), '').trim();
     const parsed = JSON.parse(cleaned);
     msgEl.textContent = parsed.message;
     msgEl.style.color = '#111';
