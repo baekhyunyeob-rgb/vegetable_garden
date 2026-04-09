@@ -103,3 +103,16 @@ function findCsvCrop(name) {
 function getFileDownloadUrl(cntntsNo) {
   return `http://www.nongsaro.go.kr/portal/contentsFileDownload.do?cntntsNo=${cntntsNo}`;
 }
+
+function buildFileSection(fileInfo) {
+  const url = getFileDownloadUrl(fileInfo.no);
+  const div = document.createElement('div');
+  div.style.cssText = 'margin-top:10px;padding:10px;background:#f8f8f8;border-radius:8px;';
+  div.innerHTML = '<div style="font-size:10px;color:#999;margin-bottom:6px;">📎 농작업일정 참고자료</div>';
+  const btn = document.createElement('button');
+  btn.style.cssText = 'width:100%;padding:7px;background:white;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:6px;font-size:11px;cursor:pointer;';
+  btn.textContent = '📥 ' + fileInfo.key + ' 농작업일정 (' + fileInfo.ext.toUpperCase() + ') 받기';
+  btn.onclick = function() { window.open(url); };
+  div.appendChild(btn);
+  return div.outerHTML;
+}

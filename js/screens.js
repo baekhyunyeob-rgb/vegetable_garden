@@ -944,7 +944,7 @@ function renderAI() {
 let nongsaroCache = {};
 
 async function showNongsaroInfo(cropName, idx) {
-  document.querySelectorAll('[id^="nc-btn-"]').forEach((btn, i) => {
+  document.querySelectorAll('[id^="nc-btn-"]').forEach(function(btn, i) {
     btn.style.background = i === idx ? '#2E7D32' : 'white';
     btn.style.color = i === idx ? 'white' : '#666';
     btn.style.borderColor = i === idx ? '#2E7D32' : '#eee';
@@ -961,126 +961,84 @@ async function showNongsaroInfo(cropName, idx) {
   contentEl.innerHTML = '<div style="color:#999;font-size:11px;padding:10px 0;">정보 불러오는 중...</div>';
 
   const info = getNongsaroInfo(cropName);
-
-  // 파일 참고자료 (항상 표시)
-  const fileSection = info.fileInfo ? `
-    <div style="margin-top:10px;padding:10px;background:#f8f8f8;border-radius:8px;">
-      <div style="font-size:10px;color:#999;margin-bottom:6px;">📎 농작업일정 참고자료</div>
-      <button onclick="window.open('${getFileDownloadUrl(info.fileInfo.no)}')"
-        style="width:100%;padding:7px;background:white;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:6px;font-size:11px;cursor:pointer;">
-        📥 ${info.fileInfo.key} 농작업일정 (${info.fileInfo.ext.toUpperCase()}) 받기
-      </button>
-    </div>` : '';
+  const fileSection = info.fileInfo ? buildFileSection(info.fileInfo) : '';
+  let html = '';
 
   if (info.type === 'none') {
-    const html = `
-      <div style="background:#f8f8f8;border-radius:8px;padding:12px;text-align:center;">
-        <div style="font-size:13px;margin-bottom:4px;">😔</div>
-        <div style="font-size:12px;color:#666;margin-bottom:2px;">${cropName} 농사 정보가 없어요</div>
-        <div style="font-size:10px;color:#bbb;">농사로에서 제공하지 않는 작물이에요</div>
-      </div>`;
-    nongsaroCache[cropName] = html;
-    contentEl.innerHTML = html;
-    return;
-  }
-
-  if (info.type === 'file_only') {
-    const html = `
-      <div style="background:#EAF3DE;border-radius:8px;padding:12px;">
-        <div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:6px;">📥 ${info.fileInfo.key} 농작업 일정</div>
-        <div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.6;">
-          파종·시비·수확 등 월별 농작업 일정을<br>파일로 다운로드해서 확인할 수 있어요.
-        </div>
-        <button onclick="window.open('${getFileDownloadUrl(info.fileInfo.no)}')"
-          style="width:100%;padding:9px;background:#2E7D32;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:500;">
-          📥 농작업일정 (${info.fileInfo.ext.toUpperCase()}) 다운로드
-        </button>
-        <div style="font-size:10px;color:#999;margin-top:6px;text-align:center;">한글뷰어 또는 PDF 앱 필요</div>
-      </div>`;
-    nongsaroCache[cropName] = html;
-    contentEl.innerHTML = html;
-    return;
-  }
-
-  if (info.type === 'csv') {
-    const d = info.csvData;
-    const sections = (d.sections || []).slice(0, 2).map(s =>
-      s.c ? `<div style="margin-top:8px;"><div style="font-size:10px;color:#2E7D32;font-weight:500;margin-bottom:2px;">${s.t}</div><div style="font-size:11px;color:#444;line-height:1.8;">${s.c.slice(0,300)}${s.c.length>300?'...':''}</div></div>` : ''
-    ).join('');
-    const html = `
-      <div style="background:#EAF3DE;border-radius:8px;padding:12px;">
-        <div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:6px;">📖 ${d.title} 재배 정보</div>
-        <div style="font-size:11px;color:#555;line-height:1.8;">${d.summary}</div>
-        ${sections}
-        <div style="font-size:9px;color:#bbb;margin-top:8px;">출처: 농림수산식품교육문화정보원</div>
-      </div>
-      ${fileSection}`;
-    nongsaroCache[cropName] = html;
-    contentEl.innerHTML = html;
-    return;
-  }
-
-  if (info.type === 'file') {
-    const html = `
-      <div style="background:#EAF3DE;border-radius:8px;padding:12px;">
-        <div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:6px;">📥 ${info.name} 농작업 일정</div>
-        <div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.6;">
-          파종·시비·수확 등 월별 농작업 일정 파일을<br>다운로드해서 확인할 수 있어요.
-        </div>
-        <button onclick="window.open('${info.url}')"
-          style="width:100%;padding:9px;background:#2E7D32;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:500;">
-          📥 농작업 일정 다운로드
-        </button>
-        <div style="font-size:10px;color:#999;margin-top:6px;text-align:center;">hwp/pdf 파일 · 한글뷰어 또는 PDF 앱 필요</div>
-      </div>`;
-    nongsaroCache[cropName] = html;
-    contentEl.innerHTML = html;
-    return;
-  }
-
-  // type === 'text'
-  try {
-    const KEY = '20260409M8NZ3DE2W1X8T00CUUUHCA';
-    const url = `http://api.nongsaro.go.kr/service/fildMnfct/fildMnfctList?apiKey=${KEY}&numOfRows=3&pageNo=1&sSeCode=335001&sType=sCntntsSj&sText=${encodeURIComponent(cropName)}`;
-    const res = await fetch(url);
-    const text = await res.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, 'text/xml');
-    const items = xml.querySelectorAll('item');
-
-    if (!items.length) {
-      const html = '<div style="color:#ccc;font-size:11px;padding:10px 0;text-align:center;">정보를 찾을 수 없어요</div>';
-      contentEl.innerHTML = html;
-      return;
+    html = renderNoneSection(cropName);
+  } else if (info.type === 'file_only') {
+    html = renderFileOnlySection(info.fileInfo);
+  } else if (info.type === 'csv') {
+    html = renderCsvSection(info.csvData) + fileSection;
+  } else if (info.type === 'api') {
+    try {
+      html = await fetchApiSection(cropName) + fileSection;
+    } catch(e) {
+      html = '<div style="color:#ccc;font-size:11px;padding:10px 0;text-align:center;">정보를 불러올 수 없어요</div>';
     }
-
-    const item = items[0];
-    const title = item.querySelector('cntntsSj')?.textContent?.trim() || cropName;
-    const cn = item.querySelector('cn')?.textContent || '';
-    const cntntsNo = item.querySelector('cntntsNo')?.textContent?.trim();
-
-    const tmp = document.createElement('div');
-    tmp.innerHTML = cn;
-    const fullText = tmp.textContent.trim();
-    const preview = fullText.slice(0, 400);
-
-    const html = `
-      <div style="background:#EAF3DE;border-radius:8px;padding:12px;">
-        <div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:8px;">📖 ${title} 재배 정보</div>
-        <div style="font-size:11px;color:#444;line-height:1.9;white-space:pre-wrap;">${preview}${fullText.length > 400 ? '...' : ''}</div>
-        <button onclick="window.open('https://www.nongsaro.go.kr/portal/ps/psb/psbk/fildMnfctDtl.ps?cntntsNo=${cntntsNo}')"
-          style="width:100%;margin-top:10px;padding:8px;background:white;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:8px;font-size:11px;cursor:pointer;">
-          농사로에서 전체 보기 ›
-        </button>
-      </div>
-      ${fileSection}`;
-
-    nongsaroCache[cropName] = html;
-    contentEl.innerHTML = html;
-
-  } catch(e) {
-    contentEl.innerHTML = '<div style="color:#ccc;font-size:11px;padding:10px 0;text-align:center;">정보를 불러올 수 없어요</div>';
   }
+
+  nongsaroCache[cropName] = html;
+  contentEl.innerHTML = html;
+}
+
+function renderNoneSection(cropName) {
+  return '<div style="background:#f8f8f8;border-radius:8px;padding:12px;text-align:center;">' +
+    '<div style="font-size:13px;margin-bottom:4px;">😔</div>' +
+    '<div style="font-size:12px;color:#666;margin-bottom:2px;">' + cropName + ' 농사 정보가 없어요</div>' +
+    '<div style="font-size:10px;color:#bbb;">농사로에서 제공하지 않는 작물이에요</div></div>';
+}
+
+function renderFileOnlySection(fileInfo) {
+  return '<div style="background:#EAF3DE;border-radius:8px;padding:12px;">' +
+    '<div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:6px;">📥 ' + fileInfo.key + ' 농작업 일정</div>' +
+    '<div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.6;">파종·시비·수확 등 월별 농작업 일정을<br>파일로 다운로드해서 확인할 수 있어요.</div>' +
+    '<button onclick="window.open('' + getFileDownloadUrl(fileInfo.no) + '')" ' +
+    'style="width:100%;padding:9px;background:#2E7D32;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:500;">' +
+    '📥 농작업일정 (' + fileInfo.ext.toUpperCase() + ') 다운로드</button>' +
+    '<div style="font-size:10px;color:#999;margin-top:6px;text-align:center;">한글뷰어 또는 PDF 앱 필요</div></div>';
+}
+
+function renderCsvSection(d) {
+  let sections = '';
+  (d.sections || []).slice(0, 2).forEach(function(s) {
+    if (s.c) {
+      sections += '<div style="margin-top:8px;">' +
+        '<div style="font-size:10px;color:#2E7D32;font-weight:500;margin-bottom:2px;">' + s.t + '</div>' +
+        '<div style="font-size:11px;color:#444;line-height:1.8;">' + s.c.slice(0, 300) + (s.c.length > 300 ? '...' : '') + '</div></div>';
+    }
+  });
+  return '<div style="background:#EAF3DE;border-radius:8px;padding:12px;">' +
+    '<div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:6px;">📖 ' + d.title + ' 재배 정보</div>' +
+    '<div style="font-size:11px;color:#555;line-height:1.8;">' + d.summary + '</div>' +
+    sections +
+    '<div style="font-size:9px;color:#bbb;margin-top:8px;">출처: 농림수산식품교육문화정보원</div></div>';
+}
+
+async function fetchApiSection(cropName) {
+  const KEY = '20260409M8NZ3DE2W1X8T00CUUUHCA';
+  const url = 'http://api.nongsaro.go.kr/service/fildMnfct/fildMnfctList?apiKey=' + KEY +
+    '&numOfRows=3&pageNo=1&sSeCode=335001&sType=sCntntsSj&sText=' + encodeURIComponent(cropName);
+  const res = await fetch(url);
+  const text = await res.text();
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, 'text/xml');
+  const items = xml.querySelectorAll('item');
+  if (!items.length) return '<div style="color:#ccc;font-size:11px;padding:10px 0;text-align:center;">정보를 찾을 수 없어요</div>';
+  const item = items[0];
+  const title = (item.querySelector('cntntsSj') || {}).textContent || cropName;
+  const cn = (item.querySelector('cn') || {}).textContent || '';
+  const cntntsNo = ((item.querySelector('cntntsNo') || {}).textContent || '').trim();
+  const tmp = document.createElement('div');
+  tmp.innerHTML = cn;
+  const fullText = tmp.textContent.trim();
+  const preview = fullText.slice(0, 400);
+  return '<div style="background:#EAF3DE;border-radius:8px;padding:12px;">' +
+    '<div style="font-size:12px;font-weight:500;color:#27500A;margin-bottom:8px;">📖 ' + title.trim() + ' 재배 정보</div>' +
+    '<div style="font-size:11px;color:#444;line-height:1.9;white-space:pre-wrap;">' + preview + (fullText.length > 400 ? '...' : '') + '</div>' +
+    '<button onclick="window.open('https://www.nongsaro.go.kr/portal/ps/psb/psbk/fildMnfctDtl.ps?cntntsNo=' + cntntsNo + '')" ' +
+    'style="width:100%;margin-top:10px;padding:8px;background:white;color:#2E7D32;border:0.5px solid #2E7D32;border-radius:8px;font-size:11px;cursor:pointer;">' +
+    '농사로에서 전체 보기 ›</button></div>';
 }
 
 
@@ -1095,8 +1053,8 @@ async function runAI() {
   const todayWorks = STATE.calendar.works[today] || [];
   const workStr = todayWorks.length ? todayWorks.map(w=>w.workType).join('·') : '작업 없음';
 
-  ctxEl.innerHTML = [`☀️ 날씨`, crops, workStr, '서천읍']
-    .map(t => `<span style="font-size:10px;color:#666;background:#f8f8f8;border-radius:4px;padding:2px 6px;">${t}</span>`).join('');
+  ctxEl.innerHTML = ['☀️ 날씨', crops, workStr, '서천읍']
+    .map(function(t){return '<span style="font-size:10px;color:#666;background:#f8f8f8;border-radius:4px;padding:2px 6px;">'+t+'</span>';}).join('');
 
   msgEl.textContent = 'AI 분석 중...';
   msgEl.style.color = '#999';
