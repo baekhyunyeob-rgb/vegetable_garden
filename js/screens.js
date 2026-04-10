@@ -21,11 +21,11 @@ function renderMyFarm() {
   const crops = STATE.farm.crops;
 
   el.innerHTML =
-    '<div style="padding:16px 14px;">' +
+    '<div>' +
 
     // ── 등록된 텃밭 목록 ──
     (crops.length === 0 ?
-      '<div style="text-align:center;padding:20px 0 10px;color:#ccc;font-size:12px;">' +
+      '<div style="text-align:center;padding:10px 0 8px;color:#ccc;font-size:12px;">' +
       '아직 등록된 텃밭이 없어요<br>' +
       '<span style="font-size:11px;">토지와 작물을 등록하면 맞춤 농업 정보를 알려드려요</span>' +
       '</div>' :

@@ -20,7 +20,7 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 12px 16px 14px;
+  padding: 8px 16px 8px;
   border-bottom: 0.5px solid #eee;
   flex-shrink: 0;
 }
