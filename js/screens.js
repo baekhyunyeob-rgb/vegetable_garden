@@ -70,7 +70,6 @@ function renderMyFarm() {
     </div>
   `;
 
-  selectCatTab(0);
 }
 
 function renderFarmEmptyHTML() {
@@ -276,7 +275,8 @@ function openRegisterSheet() {
   document.getElementById('sheet-delete-btn').style.display = 'none';
   document.getElementById('jibun-input').value = '';
   document.getElementById('register-sheet').style.display = 'block';
-  selectCatTab(0);
+  STATE.farm.pendingCrops = [];
+  renderCropList();
   setTimeout(() => { initKakaoMap(); initSheetSwipe(); }, 300);
 }
 
