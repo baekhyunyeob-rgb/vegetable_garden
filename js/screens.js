@@ -139,9 +139,16 @@ function initKakaoMap() {
     kakaoMap = new kakao.maps.Map(container, options);
     kakaoGeocoder = new kakao.maps.services.Geocoder();
     kakaoMarker = new kakao.maps.Marker();
-    setTimeout(function() { kakaoMap.relayout(); }, 300);
-    setTimeout(function() { kakaoMap.relayout(); }, 800);
-    setTimeout(function() { kakaoMap.relayout(); }, 1500);
+    // 바텀시트 애니메이션 완료 후 지도 재계산
+    var sheetEl = document.getElementById('sheet-body');
+    if (sheetEl) {
+      sheetEl.addEventListener('transitionend', function onTransEnd() {
+        sheetEl.removeEventListener('transitionend', onTransEnd);
+        kakaoMap.relayout();
+      });
+    }
+    // fallback: 2초 후에도 안됐으면 강제 실행
+    setTimeout(function() { if (kakaoMap) kakaoMap.relayout(); }, 2000);
 
     // 지도 클릭 시 좌표 → 주소 변환
     kakao.maps.event.addListener(kakaoMap, 'click', function(mouseEvent) {
@@ -284,8 +291,8 @@ function openRegisterSheet() {
   document.getElementById('register-sheet').style.display = 'block';
   STATE.farm.pendingCrops = [];
   renderCropList();
-  setTimeout(() => { initSheetSwipe(); }, 100);
-  setTimeout(() => { initKakaoMap(); }, 600);
+  initSheetSwipe();
+  setTimeout(() => { initKakaoMap(); }, 800);
 }
 
 function openEditSheet(jibun) {
@@ -329,13 +336,12 @@ function closeSheet() {
 
 // 바텀시트 스와이프 닫기
 function initSheetSwipe() {
-  const sheetBody = document.getElementById('sheet-body');
-  if (!sheetBody) return;
-
-  // 이전 이벤트 제거를 위해 복제
-  const newBody = sheetBody.cloneNode(true);
-  sheetBody.parentNode.replaceChild(newBody, sheetBody);
   const el = document.getElementById('sheet-body');
+  if (!el) return;
+
+  // 이미 초기화됐으면 스킵
+  if (el._swipeInit) return;
+  el._swipeInit = true;
 
   let startY = 0;
   let currentY = 0;
