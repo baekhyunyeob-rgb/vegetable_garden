@@ -120,7 +120,11 @@ let kakaoGeocoder = null;
 
 function initKakaoMap() {
   const container = document.getElementById('kakao-map');
-  if (!container || !window.kakao) return;
+  if (!container) return;
+  if (!window.kakao) {
+    setTimeout(initKakaoMap, 500);
+    return;
+  }
 
   kakao.maps.load(() => {
     // 항상 새로 초기화 (시트가 닫혔다 열리면 컨테이너가 새로 생성됨)
@@ -135,6 +139,7 @@ function initKakaoMap() {
     kakaoMap = new kakao.maps.Map(container, options);
     kakaoGeocoder = new kakao.maps.services.Geocoder();
     kakaoMarker = new kakao.maps.Marker();
+    setTimeout(function() { kakaoMap.relayout(); }, 100);
 
     // 지도 클릭 시 좌표 → 주소 변환
     kakao.maps.event.addListener(kakaoMap, 'click', function(mouseEvent) {
@@ -277,7 +282,7 @@ function openRegisterSheet() {
   document.getElementById('register-sheet').style.display = 'block';
   STATE.farm.pendingCrops = [];
   renderCropList();
-  setTimeout(() => { initKakaoMap(); initSheetSwipe(); }, 300);
+  setTimeout(() => { initKakaoMap(); initSheetSwipe(); }, 500);
 }
 
 function openEditSheet(jibun) {

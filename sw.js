@@ -1,5 +1,5 @@
-const CACHE = 'textbat-v4';
-const ASSETS = ['/', '/index.html', '/css/style.css', '/js/app.js', '/js/data.js', '/js/screens.js'];
+const CACHE = 'textbat-v7';
+const ASSETS = ['/', '/index.html', '/css/style.css', '/js/app.js', '/js/data.js', '/js/screens.js', '/js/nongsaro_db.js', '/js/csv_crop_db.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -14,10 +14,12 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.url.includes('/api/') || 
-      e.request.url.includes('vworld.kr') || 
+  if (e.request.url.includes('/api/') ||
+      e.request.url.includes('vworld.kr') ||
       e.request.url.includes('kakao') ||
-      e.request.url.includes('anthropic')) {
+      e.request.url.includes('nongsaro') ||
+      e.request.url.includes('anthropic') ||
+      e.request.url.includes('data.go.kr')) {
     return;
   }
   e.respondWith(
