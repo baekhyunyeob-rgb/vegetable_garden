@@ -115,21 +115,24 @@ function renderFarmListHTML() {
     var landArea = land && land.areaPyeong ? land.areaPyeong + '평' : '';
     var landInfo = jimok && landArea ? '(' + jimok + ' ' + landArea + ')' : jimok ? '(' + jimok + ')' : '';
 
+    var badgeHtml = crops.map(function(c) {
+      return '<span style="font-size:10px;background:#EAF3DE;color:#2E7D32;padding:2px 7px;border-radius:8px;white-space:nowrap;">' +
+        c.name + ' ' + (c.area || '?') + (c.unit || '평') + '</span>';
+    }).join('');
+
     return '<div style="background:white;border-radius:12px;border:0.5px solid #eee;padding:10px 14px;margin-bottom:8px;">' +
-      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-        // 번호
-        '<span style="font-size:10px;color:white;background:#2E7D32;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + (idx+1) + '</span>' +
-        // 지번
-        '<span style="font-size:13px;font-weight:500;">' + short + '</span>' +
-        // 지목+면적
-        (landInfo ? '<span style="font-size:10px;color:#999;">' + landInfo + '</span>' : '') +
-        // 작물 배지들
-        crops.map(function(c) {
-          return '<span style="font-size:10px;background:#EAF3DE;color:#2E7D32;padding:2px 7px;border-radius:8px;">' +
-            c.name + ' ' + (c.area || '?') + (c.unit || '평') + '</span>';
-        }).join('') +
-        // 수정 버튼
-        '<button onclick="startEdit(\'' + jibun + '\')" style="font-size:11px;color:#2E7D32;background:none;border:0.5px solid #2E7D32;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto;">수정</button>' +
+      // 1행: 번호+지번+지목 / 수정
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
+        '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' +
+          '<span style="font-size:10px;color:white;background:#2E7D32;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + (idx+1) + '</span>' +
+          '<span style="font-size:13px;font-weight:500;">' + short + '</span>' +
+          (landInfo ? '<span style="font-size:10px;color:#999;">' + landInfo + '</span>' : '') +
+        '</div>' +
+        '<button onclick="startEdit(\'' + jibun + '\')" style="font-size:11px;color:#2E7D32;background:none;border:0.5px solid #2E7D32;border-radius:6px;padding:2px 8px;cursor:pointer;flex-shrink:0;">수정</button>' +
+      '</div>' +
+      // 2행: 작물 배지 (들여쓰기)
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;padding-left:20px;">' +
+        badgeHtml +
       '</div>' +
     '</div>';
   }).join('');

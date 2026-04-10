@@ -1,4 +1,4 @@
-const CACHE = 'textbat-v7';
+const CACHE = 'textbat-v8';
 const ASSETS = ['/', '/index.html', '/css/style.css', '/js/app.js', '/js/data.js', '/js/screens.js', '/js/nongsaro_db.js', '/js/csv_crop_db.js'];
 
 self.addEventListener('install', e => {
