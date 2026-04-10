@@ -43,21 +43,27 @@ function renderMyFarm() {
           <div id="parcel-info" style="margin-top:6px;"></div>
         </div>
 
-        <div style="font-size:11px;color:#999;margin-bottom:6px;">🌿 작물 선택</div>
-        <div style="display:flex;gap:4px;margin-bottom:8px;" id="cat-tabs">
-          ${CROP_CATEGORIES.map((cat, i) => `
-            <button onclick="selectCatTab(${i})" id="cat-tab-${i}"
-              style="flex:1;font-size:9px;padding:5px 2px;border-radius:12px;border:0.5px solid #eee;color:#999;background:white;white-space:nowrap;cursor:pointer;">
-              ${cat.label}
-            </button>
-          `).join('')}
+        <div style="font-size:11px;color:#999;margin-bottom:6px;">🌿 작물 등록</div>
+
+        <div style="position:relative;margin-bottom:8px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" id="crop-search-input" placeholder="작물명 입력 (예: 고추)"
+              oninput="onCropSearchInput(this.value)"
+              style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ddd;border-radius:8px;" />
+            <input type="number" id="crop-area-input" placeholder="면적"
+              style="width:64px;font-size:13px;padding:8px;border:0.5px solid #ddd;border-radius:8px;" />
+            <select id="crop-unit-select"
+              style="border:0.5px solid #ddd;border-radius:8px;padding:8px 4px;font-size:11px;color:#666;">
+              <option>평</option>
+              <option>㎡</option>
+            </select>
+            <button onclick="addCropFromSearch()"
+              style="background:#2E7D32;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;flex-shrink:0;">추가</button>
+          </div>
+          <div id="crop-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:0.5px solid #ddd;border-radius:8px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-height:180px;overflow-y:auto;margin-top:2px;"></div>
         </div>
 
-        <div style="background:#f8f8f8;border-radius:8px;padding:8px;margin-bottom:8px;">
-          <div id="crop-chips" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
-        </div>
-
-        <div id="crop-inputs" style="margin-bottom:14px;"></div>
+        <div id="crop-list" style="margin-bottom:14px;"></div>
 
         <button class="btn-primary" style="margin:0;" onclick="confirmEntry()">등록 완료</button>
       </div>
@@ -301,9 +307,7 @@ function openEditSheet(jibun) {
     }
   }, 100);
 
-  const firstCatId = crops[0]?.category;
-  const idx = CROP_CATEGORIES.findIndex(c => c.id === firstCatId);
-  selectCatTab(idx >= 0 ? idx : 0);
+  setTimeout(function() { renderCropList(); }, 200);
 }
 
 function closeSheetOutside(e) {
@@ -366,85 +370,116 @@ function initSheetSwipe() {
   }, { passive: true });
 }
 
-function selectCatTab(idx) {
-  selectedCatIdx = idx;
-  document.querySelectorAll('[id^="cat-tab-"]').forEach((btn, i) => {
-    btn.style.background = i === idx ? '#2E7D32' : 'white';
-    btn.style.color = i === idx ? 'white' : '#999';
-    btn.style.borderColor = i === idx ? '#2E7D32' : '#eee';
-    btn.style.fontWeight = i === idx ? '500' : 'normal';
+function onCropSearchInput(val) {
+  const autoEl = document.getElementById('crop-autocomplete');
+  if (!autoEl) return;
+  const q = val.trim();
+  if (!q) { autoEl.style.display = 'none'; return; }
+
+  const matches = FARM_CROPS_DB.filter(function(c) {
+    return c.name.includes(q);
   });
-  renderCropChips();
+
+  if (!matches.length) { autoEl.style.display = 'none'; return; }
+
+  autoEl.style.display = 'block';
+  autoEl.innerHTML = matches.map(function(c) {
+    return '<div onclick="selectCropFromAuto(\'' + c.name + '\')" ' +
+      'style="padding:10px 12px;font-size:12px;cursor:pointer;border-bottom:0.5px solid #f0f0f0;" ' +
+      'style="padding:10px 12px;font-size:12px;cursor:pointer;border-bottom:0.5px solid #f0f0f0;">' +
+      '<span style="color:#111;">' + c.name + '</span>' +
+      '<span style="font-size:10px;color:#999;margin-left:6px;">' + c.cat + '</span>' +
+      '</div>';
+  }).join('');
 }
 
-function renderCropChips() {
-  const cat = CROP_CATEGORIES[selectedCatIdx];
-  const chipsEl = document.getElementById('crop-chips');
-  if (!chipsEl) return;
-  if (!STATE.farm.pendingCrops) STATE.farm.pendingCrops = [];
-
-  const selected = STATE.farm.pendingCrops
-    .filter(c => c.category === cat.id).map(c => c.name);
-
-  chipsEl.innerHTML = cat.crops.map(name => `
-    <button onclick="toggleCrop('${name}','${cat.id}','${cat.badgeClass}')"
-      style="font-size:10px;padding:4px 10px;border-radius:10px;cursor:pointer;margin:2px;
-             border:0.5px solid ${selected.includes(name) ? '#2E7D32' : '#eee'};
-             background:${selected.includes(name) ? '#2E7D32' : 'white'};
-             color:${selected.includes(name) ? 'white' : '#666'};
-             font-weight:${selected.includes(name) ? '500' : 'normal'};">
-      ${name}
-    </button>
-  `).join('');
-
-  renderCropInputs(cat);
+function selectCropFromAuto(name) {
+  const input = document.getElementById('crop-search-input');
+  const autoEl = document.getElementById('crop-autocomplete');
+  if (input) input.value = name;
+  if (autoEl) autoEl.style.display = 'none';
 }
 
-function toggleCrop(name, catId, badgeClass) {
+function addCropFromSearch() {
+  const nameEl = document.getElementById('crop-search-input');
+  const areaEl = document.getElementById('crop-area-input');
+  const unitEl = document.getElementById('crop-unit-select');
+  const autoEl = document.getElementById('crop-autocomplete');
+
+  const name = nameEl ? nameEl.value.trim() : '';
+  const area = areaEl ? areaEl.value.trim() : '';
+  const unit = unitEl ? unitEl.value : '평';
+
+  if (!name) { alert('작물명을 입력하세요'); return; }
+
+  // DB에서 cntntsNo 찾기
+  const found = FARM_CROPS_DB.find(function(c) { return c.name === name; });
+  const cntntsNo = found ? found.cntntsNo : null;
+  const cat = found ? found.cat : '기타';
+
   if (!STATE.farm.pendingCrops) STATE.farm.pendingCrops = [];
-  const idx = STATE.farm.pendingCrops.findIndex(c => c.name === name && c.category === catId);
-  if (idx >= 0) {
-    STATE.farm.pendingCrops.splice(idx, 1);
-  } else {
-    STATE.farm.pendingCrops.push({ name, category: catId, badgeClass, area: '', unit: '평' });
+
+  // 중복 확인
+  if (STATE.farm.pendingCrops.find(function(c) { return c.name === name; })) {
+    alert('이미 추가된 작물이에요');
+    return;
   }
-  renderCropChips();
+
+  STATE.farm.pendingCrops.push({ name, area, unit, cat, cntntsNo });
+
+  // 입력창 초기화
+  if (nameEl) nameEl.value = '';
+  if (areaEl) areaEl.value = '';
+  if (autoEl) autoEl.style.display = 'none';
+
+  renderCropList();
 }
 
-function renderCropInputs(cat) {
-  const inputsEl = document.getElementById('crop-inputs');
-  if (!inputsEl) return;
-  const catCrops = (STATE.farm.pendingCrops || []).filter(c => c.category === cat.id);
-  if (!catCrops.length) { inputsEl.innerHTML = ''; return; }
+function renderCropList() {
+  const listEl = document.getElementById('crop-list');
+  if (!listEl) return;
+  const crops = STATE.farm.pendingCrops || [];
+  if (!crops.length) { listEl.innerHTML = ''; return; }
 
-  inputsEl.innerHTML = `
-    <div style="background:#f8f8f8;border-radius:8px;padding:10px;">
-      ${catCrops.map(c => `
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-          <span class="badge ${c.badgeClass}" style="flex-shrink:0;min-width:44px;text-align:center;">${c.name}</span>
-          <input type="number" placeholder="면적"
-            value="${c.area}"
-            onchange="updatePendingArea('${c.name}','${c.category}',this.value)"
-            style="width:64px;padding:5px 8px;font-size:12px;" />
-          <select onchange="updatePendingUnit('${c.name}','${c.category}',this.value)"
-            style="border:0.5px solid #ddd;border-radius:6px;padding:5px;font-size:11px;color:#666;">
-            <option ${c.unit==='평'?'selected':''}>평</option>
-            <option ${c.unit==='㎡'?'selected':''}>㎡</option>
-          </select>
-        </div>
-      `).join('')}
-    </div>
-  `;
+  listEl.innerHTML = '<div style="background:#f8f8f8;border-radius:8px;padding:10px;">' +
+    crops.map(function(c, i) {
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+        '<span style="flex:1;font-size:12px;color:#111;">' + c.name + '</span>' +
+        (c.cntntsNo ?
+          '<span style="font-size:9px;color:#2E7D32;background:#EAF3DE;padding:2px 5px;border-radius:4px;">📅월력</span>' :
+          '<span style="font-size:9px;color:#999;background:#f0f0f0;padding:2px 5px;border-radius:4px;">정보없음</span>') +
+        '<input type="number" placeholder="면적" value="' + (c.area||'') + '"' +
+        ' oninput="updatePendingArea2(' + i + ',this.value)"' +
+        ' style="width:60px;font-size:12px;padding:5px;border:0.5px solid #ddd;border-radius:6px;" />' +
+        '<select oninput="updatePendingUnit2(' + i + ',this.value)"' +
+        ' style="border:0.5px solid #ddd;border-radius:6px;padding:5px 3px;font-size:11px;color:#666;">' +
+        '<option' + (c.unit==='평'?' selected':'') + '>평</option>' +
+        '<option' + (c.unit==='㎡'?' selected':'') + '>㎡</option>' +
+        '</select>' +
+        '<button onclick="removePendingCrop(' + i + ')" ' +
+        'style="color:#E24B4A;background:none;border:none;font-size:14px;cursor:pointer;padding:0 4px;">×</button>' +
+        '</div>';
+    }).join('') +
+    '</div>';
 }
 
-function updatePendingArea(name, catId, val) {
-  const c = (STATE.farm.pendingCrops || []).find(c => c.name === name && c.category === catId);
-  if (c) c.area = val;
+function updatePendingArea2(idx, val) {
+  if (STATE.farm.pendingCrops && STATE.farm.pendingCrops[idx]) {
+    STATE.farm.pendingCrops[idx].area = val;
+  }
 }
-function updatePendingUnit(name, catId, val) {
-  const c = (STATE.farm.pendingCrops || []).find(c => c.name === name && c.category === catId);
-  if (c) c.unit = val;
+function updatePendingUnit2(idx, val) {
+  if (STATE.farm.pendingCrops && STATE.farm.pendingCrops[idx]) {
+    STATE.farm.pendingCrops[idx].unit = val;
+  }
 }
+function removePendingCrop(idx) {
+  if (STATE.farm.pendingCrops) {
+    STATE.farm.pendingCrops.splice(idx, 1);
+    renderCropList();
+  }
+}
+
 
 function confirmEntry() {
   const jibun = document.getElementById('jibun-input')?.value.trim();
