@@ -1,161 +1,166 @@
-// ════════════════════════════════════════════════════
-// 화면 1 — 내 텃밭
-// ════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// screens.js — 슬기로운 텃밭 생활
+// ═══════════════════════════════════════════════
 
-let selectedCatIdx = 0;
+// ── 전역 변수 ───────────────────────────────────
 let editingJibun = null;
-
-function renderMyFarm() {
-  const el = document.getElementById('screen-my-farm');
-  const hasCrops = STATE.farm.crops.length > 0;
-
-  el.innerHTML = `
-    <div id="farm-list-view">
-      ${hasCrops ? renderFarmListHTML() : renderFarmEmptyHTML()}
-    </div>
-
-    <div style="height:70px;"></div>
-    <div style="position:sticky;bottom:0;background:white;border-top:0.5px solid #eee;padding:10px 14px;">
-      <button class="btn-primary" style="margin:0;" onclick="openRegisterSheet()">+ 텃밭 등록하기</button>
-    </div>
-
-    <!-- 등록/수정 시트 -->
-    <div id="register-sheet" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(0,0,0,0.4);" onclick="closeSheetOutside(event)">
-      <div id="sheet-body" style="position:absolute;bottom:0;left:0;right:0;background:white;border-radius:16px 16px 0 0;max-height:80%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 40px;transition:transform 0.3s ease;transform:translateY(0);">
-        <div style="width:36px;height:4px;background:#eee;border-radius:2px;margin:0 auto 16px;"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <span style="font-size:15px;font-weight:500;" id="sheet-title">텃밭 등록</span>
-          <span id="sheet-delete-btn" style="display:none;font-size:12px;color:#E24B4A;cursor:pointer;" onclick="deleteLandEntry()">이 토지 삭제</span>
-        </div>
-
-        <div id="kakao-map" style="width:100%;height:160px;border-radius:10px;margin-bottom:14px;overflow:hidden;"></div>
-
-        <div style="margin-bottom:14px;">
-          <div style="font-size:11px;color:#999;margin-bottom:6px;">📍 토지 지번 (주소 입력 후 검색)</div>
-          <div style="display:flex;gap:6px;margin-bottom:6px;">
-            <input type="text" id="jibun-input" placeholder="예: 충남 서천군 서천읍 화금리 123-4" style="flex:1;" />
-            <button onclick="searchAddress()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;flex-shrink:0;">검색</button>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button onclick="findByGPS()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;flex-shrink:0;width:100%;">📡 GPS로 현재 위치 찾기</button>
-          </div>
-          <div style="font-size:10px;color:#bbb;margin-top:4px;">지번을 모르면 GPS 버튼을 눌러주세요</div>
-          <div id="parcel-info" style="margin-top:6px;"></div>
-        </div>
-
-        <div style="font-size:11px;color:#999;margin-bottom:6px;">🌿 작물 등록</div>
-
-        <div style="position:relative;margin-bottom:8px;">
-          <div style="display:flex;gap:6px;align-items:center;">
-            <input type="text" id="crop-search-input" placeholder="작물명 입력 (예: 고추)"
-              oninput="onCropSearchInput(this.value)"
-              style="flex:1;font-size:13px;padding:8px 10px;border:0.5px solid #ddd;border-radius:8px;" />
-            <input type="number" id="crop-area-input" placeholder="면적"
-              style="width:64px;font-size:13px;padding:8px;border:0.5px solid #ddd;border-radius:8px;" />
-            <select id="crop-unit-select"
-              style="border:0.5px solid #ddd;border-radius:8px;padding:8px 4px;font-size:11px;color:#666;">
-              <option>평</option>
-              <option>㎡</option>
-            </select>
-            <button onclick="addCropFromSearch()"
-              style="background:#2E7D32;color:white;border:none;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;flex-shrink:0;">추가</button>
-          </div>
-          <div id="crop-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:0.5px solid #ddd;border-radius:8px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-height:180px;overflow-y:auto;margin-top:2px;"></div>
-        </div>
-
-        <div id="crop-list" style="margin-bottom:14px;"></div>
-
-        <button class="btn-primary" style="margin:0;" onclick="confirmEntry()">등록 완료</button>
-      </div>
-    </div>
-  `;
-
-}
-
-function renderFarmEmptyHTML() {
-  return `
-    <div style="text-align:center;padding:60px 20px 20px;">
-      <div style="font-size:40px;margin-bottom:12px;">🌱</div>
-      <div style="font-size:14px;font-weight:500;color:#111;margin-bottom:6px;">아직 등록된 텃밭이 없어요</div>
-      <div style="font-size:12px;color:#999;line-height:1.7;">토지와 작물을 등록하면<br>맞춤 농업 정보를 알려드려요</div>
-    </div>
-  `;
-}
-
-function renderFarmListHTML() {
-  const byLand = {};
-  STATE.farm.crops.forEach(c => {
-    const key = c.jibun || '미지정';
-    if (!byLand[key]) byLand[key] = [];
-    byLand[key].push(c);
-  });
-
-  return Object.entries(byLand).map(([jibun, crops]) => {
-    const shortJibun = jibun === '미지정' ? '미지정' : jibun.split(' ').slice(-2).join(' ');
-    const totalArea = crops.reduce((s, c) => s + (parseFloat(c.area) || 0), 0);
-    const unit = crops[0]?.unit || '평';
-    return `
-      <div style="background:white;border:0.5px solid #eee;border-radius:12px;padding:12px;margin-bottom:8px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <span onclick="openEditSheet('${jibun}')" style="font-size:13px;font-weight:500;color:#111;cursor:pointer;flex:1;">${shortJibun}</span>
-          <span style="font-size:11px;color:#999;margin-right:8px;">총 ${totalArea}${unit}</span>
-          <button onclick="removeByJibun('${jibun}')" style="font-size:11px;color:#E24B4A;border:0.5px solid #E24B4A;border-radius:5px;padding:2px 8px;background:white;cursor:pointer;">삭제</button>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;cursor:pointer;" onclick="openEditSheet('${jibun}')">
-          ${crops.map(c => `
-            <span class="badge ${c.badgeClass || getCropBadgeClass(c.name)}">
-              ${c.name} ${c.area || '?'}${c.unit || '평'}
-            </span>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ── 카카오맵 ────────────────────────────────────
 let kakaoMap = null;
 let kakaoMarker = null;
 let kakaoGeocoder = null;
+let parcelPolygon = null;
+let selectedWorkDate = todayStr();
+let pendingWorks = [];
+let nongsaroCache = {};
 
+// ══════════════════════════════════════════════
+// 1. 내 텃밭 탭
+// ══════════════════════════════════════════════
+
+function renderMyFarm() {
+  const el = document.getElementById('screen-my-farm');
+  const crops = STATE.farm.crops;
+
+  el.innerHTML =
+    '<div style="padding:16px 14px;">' +
+
+    // ── 등록된 텃밭 목록 ──
+    (crops.length === 0 ?
+      '<div style="text-align:center;padding:20px 0 10px;color:#ccc;font-size:12px;">' +
+      '아직 등록된 텃밭이 없어요<br>' +
+      '<span style="font-size:11px;">토지와 작물을 등록하면 맞춤 농업 정보를 알려드려요</span>' +
+      '</div>' :
+      renderFarmListHTML()
+    ) +
+
+    // ── 등록/수정 폼 ──
+    '<div id="farm-form" style="margin-top:12px;background:white;border-radius:14px;border:0.5px solid #eee;overflow:hidden;">' +
+      '<div style="padding:14px 14px 0;">' +
+        '<div style="font-size:13px;font-weight:500;margin-bottom:12px;" id="form-title">' +
+          (editingJibun ? '✏️ 텃밭 수정' : '➕ 텃밭 등록') +
+        '</div>' +
+
+        // 지도
+        '<div id="kakao-map" style="width:100%;height:180px;border-radius:10px;margin-bottom:12px;background:#e8f0e9;"></div>' +
+
+        // 주소 입력
+        '<div style="margin-bottom:10px;">' +
+          '<div style="font-size:11px;color:#999;margin-bottom:5px;">📍 토지 지번</div>' +
+          '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+            '<input type="text" id="jibun-input" placeholder="예: 충남 서천군 서천읍 화금리 123-4" style="flex:1;font-size:12px;padding:8px 10px;border:0.5px solid #ddd;border-radius:8px;" />' +
+            '<button onclick="searchAddress()" style="border:0.5px solid #2E7D32;border-radius:8px;padding:8px 10px;font-size:11px;color:#2E7D32;background:white;white-space:nowrap;">검색</button>' +
+          '</div>' +
+          '<button onclick="findByGPS()" style="width:100%;border:0.5px solid #2E7D32;border-radius:8px;padding:8px;font-size:11px;color:#2E7D32;background:white;">📡 GPS로 현재 위치 찾기</button>' +
+          '<div id="parcel-info" style="margin-top:6px;font-size:10px;color:#999;"></div>' +
+        '</div>' +
+
+        // 작물 등록
+        '<div style="margin-bottom:10px;">' +
+          '<div style="font-size:11px;color:#999;margin-bottom:5px;">🌿 작물 등록</div>' +
+          '<div style="position:relative;">' +
+            '<div style="display:flex;gap:5px;align-items:center;">' +
+              '<input type="text" id="crop-search-input" placeholder="작물명 입력 (예: 고추)" oninput="onCropSearchInput(this.value)" style="flex:1;font-size:12px;padding:8px 10px;border:0.5px solid #ddd;border-radius:8px;" />' +
+              '<input type="number" id="crop-area-input" placeholder="면적" style="width:60px;font-size:12px;padding:8px;border:0.5px solid #ddd;border-radius:8px;" />' +
+              '<select id="crop-unit-select" style="border:0.5px solid #ddd;border-radius:8px;padding:8px 3px;font-size:11px;color:#666;">' +
+                '<option>평</option><option>㎡</option>' +
+              '</select>' +
+              '<button onclick="addCropFromSearch()" style="background:#2E7D32;color:white;border:none;border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;flex-shrink:0;">추가</button>' +
+            '</div>' +
+            '<div id="crop-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:0.5px solid #ddd;border-radius:8px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-height:160px;overflow-y:auto;margin-top:2px;"></div>' +
+          '</div>' +
+          '<div id="crop-list" style="margin-top:8px;"></div>' +
+        '</div>' +
+      '</div>' +
+
+      // 버튼
+      '<div style="display:flex;gap:8px;padding:12px 14px;">' +
+        (editingJibun ?
+          '<button onclick="deleteLandEntry()" style="flex:1;padding:11px;background:white;color:#E24B4A;border:0.5px solid #E24B4A;border-radius:10px;font-size:13px;cursor:pointer;">삭제</button>' : '') +
+        '<button onclick="confirmEntry()" style="flex:2;padding:11px;background:#2E7D32;color:white;border:none;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;">등록 완료</button>' +
+      '</div>' +
+    '</div>' +
+
+    '</div>';
+
+  // 지도 초기화 (DOM 렌더링 후)
+  setTimeout(function() { initKakaoMap(); }, 100);
+
+  // 수정 모드면 기존 데이터 채우기
+  if (editingJibun) {
+    document.getElementById('jibun-input').value = editingJibun;
+    STATE.farm.pendingCrops = STATE.farm.crops
+      .filter(function(c) { return c.jibun === editingJibun; })
+      .map(function(c) { return Object.assign({}, c); });
+    renderCropList();
+  } else {
+    STATE.farm.pendingCrops = [];
+  }
+}
+
+function renderFarmListHTML() {
+  var byLand = {};
+  STATE.farm.crops.forEach(function(c) {
+    if (!byLand[c.jibun]) byLand[c.jibun] = [];
+    byLand[c.jibun].push(c);
+  });
+
+  return Object.entries(byLand).map(function(entry) {
+    var jibun = entry[0];
+    var crops = entry[1];
+    var totalArea = crops.reduce(function(s, c) { return s + (parseFloat(c.area) || 0); }, 0);
+    var unit = crops[0] && crops[0].unit ? crops[0].unit : '평';
+    var short = jibun.split(' ').slice(-2).join(' ');
+
+    return '<div style="background:white;border-radius:12px;border:0.5px solid #eee;padding:12px 14px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+        '<span style="font-size:13px;font-weight:500;">' + short + '</span>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span style="font-size:11px;color:#999;">총 ' + totalArea + unit + '</span>' +
+          '<button onclick="startEdit(\'' + jibun + '\')" style="font-size:11px;color:#2E7D32;background:none;border:0.5px solid #2E7D32;border-radius:6px;padding:3px 8px;cursor:pointer;">수정</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;">' +
+        crops.map(function(c) {
+          return '<span style="font-size:10px;background:#EAF3DE;color:#2E7D32;padding:3px 8px;border-radius:8px;">' +
+            c.name + ' ' + (c.area || '?') + (c.unit || '평') + '</span>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function startEdit(jibun) {
+  editingJibun = jibun;
+  renderMyFarm();
+  // 폼으로 스크롤
+  setTimeout(function() {
+    var form = document.getElementById('farm-form');
+    if (form) form.scrollIntoView({ behavior: 'smooth' });
+  }, 200);
+}
+
+// ── 카카오맵 ────────────────────────────────────
 function initKakaoMap() {
-  const container = document.getElementById('kakao-map');
+  var container = document.getElementById('kakao-map');
   if (!container) return;
-  if (!window.kakao) {
-    setTimeout(initKakaoMap, 500);
+  if (!window.kakao || !window.kakao.maps) {
+    setTimeout(initKakaoMap, 300);
     return;
   }
 
-  kakao.maps.load(() => {
-    // 항상 새로 초기화 (시트가 닫혔다 열리면 컨테이너가 새로 생성됨)
-    kakaoMap = null;
-    kakaoMarker = null;
-    parcelPolygon = null;
-
-    const options = {
+  kakao.maps.load(function() {
+    var options = {
       center: new kakao.maps.LatLng(36.0776, 126.6914),
       level: 5,
     };
     kakaoMap = new kakao.maps.Map(container, options);
     kakaoGeocoder = new kakao.maps.services.Geocoder();
     kakaoMarker = new kakao.maps.Marker();
-    // 바텀시트 애니메이션 완료 후 지도 재계산
-    var sheetEl = document.getElementById('sheet-body');
-    if (sheetEl) {
-      sheetEl.addEventListener('transitionend', function onTransEnd() {
-        sheetEl.removeEventListener('transitionend', onTransEnd);
-        kakaoMap.relayout();
-      });
-    }
-    // fallback: 2초 후에도 안됐으면 강제 실행
-    setTimeout(function() { if (kakaoMap) kakaoMap.relayout(); }, 2000);
 
-    // 지도 클릭 시 좌표 → 주소 변환
     kakao.maps.event.addListener(kakaoMap, 'click', function(mouseEvent) {
-      const latlng = mouseEvent.latLng;
+      var latlng = mouseEvent.latLng;
       kakaoGeocoder.coord2Address(latlng.getLng(), latlng.getLat(), function(result, status) {
         if (status === kakao.maps.services.Status.OK) {
-          const addr = result[0].road_address
+          var addr = result[0].road_address
             ? result[0].road_address.address_name
             : result[0].address.address_name;
           document.getElementById('jibun-input').value = addr;
@@ -164,172 +169,12 @@ function initKakaoMap() {
         }
       });
     });
-  }); // kakao.maps.load 끝
-}
 
-function searchAddress() {
-  const keyword = document.getElementById('jibun-input')?.value.trim();
-  if (!keyword) { alert('주소를 입력하세요'); return; }
-  if (!kakaoGeocoder) return;
-
-  kakaoGeocoder.addressSearch(keyword, function(result, status) {
-    if (status === kakao.maps.services.Status.OK) {
-      const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
-      kakaoMap.setCenter(coords);
-      kakaoMap.setLevel(3);
-      kakaoMarker.setPosition(coords);
-      kakaoMarker.setMap(kakaoMap);
-      document.getElementById('jibun-input').value = result[0].address_name;
-      // 브이월드로 필지 정보 자동 조회
-      fetchParcelInfo(result[0].address_name);
-    } else {
-      alert('주소를 찾을 수 없어요. 더 자세히 입력해보세요.');
-    }
-  });
-}
-
-// 브이월드 필지 정보 조회
-async function fetchParcelInfo(address) {
-  const infoEl = document.getElementById('parcel-info');
-  if (!infoEl) return;
-  infoEl.innerHTML = `<span style="font-size:10px;color:#999;">토지 정보 조회 중...</span>`;
-
-  try {
-    // 1단계: 주소 → PNU + 좌표
-    const geoRes = await fetch(`/api/vworld?action=geocode&address=${encodeURIComponent(address)}`);
-    const geoData = await geoRes.json();
-
-    if (geoData.response?.status !== 'OK') {
-      infoEl.innerHTML = `<span style="font-size:10px;color:#ccc;">토지 정보를 찾을 수 없어요</span>`;
-      return;
-    }
-
-    const pnu = geoData.response.refined.structure.level4LC;
-    const bonbun = geoData.response.refined.structure.level5;
-
-    // PNU + 본번으로 19자리 PNU 구성
-    const fullPnu = pnu + '1' + bonbun.padStart(4,'0') + '0000';
-
-    // 2단계: 토지특성정보 (면적, 지목, 용도지역)
-    const landRes = await fetch(`/api/vworld?action=landinfo&pnu=${fullPnu}`);
-    const landData = await landRes.json();
-    const fields = landData.landCharacteristicss?.field;
-
-    if (!fields || !fields.length) {
-      infoEl.innerHTML = `<span style="font-size:10px;color:#ccc;">토지 정보 없음</span>`;
-      return;
-    }
-
-    // 가장 최근 연도 데이터
-    const latest = fields.sort((a,b) => b.stdrYear - a.stdrYear)[0];
-    const areaM2 = parseFloat(latest.lndpclAr);
-    const areaPyeong = Math.round(areaM2 / 3.306);
-    const jimok = latest.lndcgrCodeNm;
-    const yongdo = latest.prposArea1Nm;
-    const jiga = parseInt(latest.pblntfPclnd).toLocaleString();
-
-    // STATE에 토지 정보 저장
-    STATE.farm.currentParcel = { pnu: fullPnu, areaM2, areaPyeong, jimok, yongdo, jiga };
-
-    infoEl.innerHTML = `
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
-        <div style="background:#EAF3DE;border-radius:6px;padding:5px 10px;font-size:11px;">
-          <span style="color:#999;font-size:10px;">면적 </span>
-          <span style="color:#27500A;font-weight:500;">${areaM2}㎡ (약 ${areaPyeong}평)</span>
-        </div>
-        <div style="background:#EAF3DE;border-radius:6px;padding:5px 10px;font-size:11px;">
-          <span style="color:#999;font-size:10px;">지목 </span>
-          <span style="color:#27500A;font-weight:500;">${jimok}</span>
-        </div>
-        <div style="background:#EAF3DE;border-radius:6px;padding:5px 10px;font-size:11px;">
-          <span style="color:#999;font-size:10px;">용도 </span>
-          <span style="color:#27500A;font-weight:500;">${yongdo}</span>
-        </div>
-        <div style="background:#f8f8f8;border-radius:6px;padding:5px 10px;font-size:11px;">
-          <span style="color:#999;font-size:10px;">공시지가 </span>
-          <span style="color:#111;font-weight:500;">${jiga}원/㎡</span>
-        </div>
-      </div>
-    `;
-
-    // 3단계: 필지 경계선 카카오맵에 표시
-    const parcelRes = await fetch(`/api/vworld?action=parcel&pnu=${fullPnu}`);
-    const parcelData = await parcelRes.json();
-    const features = parcelData.response?.result?.featureCollection?.features;
-    if (features && features.length && kakaoMap) {
-      drawParcelBoundary(features[0].geometry.coordinates);
-    }
-
-  } catch(e) {
-    console.error('필지 정보 조회 오류:', e);
-    infoEl.innerHTML = `<span style="font-size:10px;color:#ccc;">토지 정보 조회 실패</span>`;
-  }
-}
-
-// 카카오맵에 필지 경계선 그리기
-let parcelPolygon = null;
-function drawParcelBoundary(coordinates) {
-  if (parcelPolygon) parcelPolygon.setMap(null);
-  const path = coordinates[0][0].map(c => new kakao.maps.LatLng(c[1], c[0]));
-  parcelPolygon = new kakao.maps.Polygon({
-    path,
-    strokeWeight: 2,
-    strokeColor: '#2E7D32',
-    strokeOpacity: 0.9,
-    fillColor: '#4CAF50',
-    fillOpacity: 0.2,
-  });
-  parcelPolygon.setMap(kakaoMap);
-}
-
-function openRegisterSheet() {
-  editingJibun = null;
-  STATE.farm.pendingCrops = [];
-  document.getElementById('sheet-title').textContent = '텃밭 등록';
-  document.getElementById('sheet-delete-btn').style.display = 'none';
-  document.getElementById('jibun-input').value = '';
-  document.getElementById('register-sheet').style.display = 'block';
-  STATE.farm.pendingCrops = [];
-  renderCropList();
-  initSheetSwipe();
-
-  // sheet-body가 올라온 후 지도 초기화
-  var sheetBody = document.getElementById('sheet-body');
-  var mapInited = false;
-  function doInitMap() {
-    if (mapInited) return;
-    mapInited = true;
-    initKakaoMap();
-  }
-  if (sheetBody) {
-    sheetBody.addEventListener('transitionend', function handler(e) {
-      if (e.propertyName === 'transform') {
-        sheetBody.removeEventListener('transitionend', handler);
-        doInitMap();
-      }
-    });
-  }
-  setTimeout(doInitMap, 1000);
-}
-
-function openEditSheet(jibun) {
-  editingJibun = jibun;
-  const crops = STATE.farm.crops.filter(c => c.jibun === jibun);
-  STATE.farm.pendingCrops = crops.map(c => ({ ...c }));
-
-  document.getElementById('sheet-title').textContent = jibun.split(' ').slice(-2).join(' ');
-  document.getElementById('sheet-delete-btn').style.display = 'block';
-  document.getElementById('jibun-input').value = jibun;
-  document.getElementById('register-sheet').style.display = 'block';
-  initSheetSwipe();
-
-  setTimeout(() => {
-    initKakaoMap();
-    // 기존 지번으로 지도 이동
-    if (kakaoGeocoder) {
-      kakaoGeocoder.addressSearch(jibun, function(result, status) {
+    // 수정 모드면 기존 위치로 이동
+    if (editingJibun && kakaoGeocoder) {
+      kakaoGeocoder.addressSearch(editingJibun, function(result, status) {
         if (status === kakao.maps.services.Status.OK) {
-          const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+          var coords = new kakao.maps.LatLng(result[0].y, result[0].x);
           kakaoMap.setCenter(coords);
           kakaoMap.setLevel(3);
           kakaoMarker.setPosition(coords);
@@ -337,86 +182,79 @@ function openEditSheet(jibun) {
         }
       });
     }
-  }, 100);
-
-  setTimeout(function() { renderCropList(); }, 200);
+  });
 }
 
-function closeSheetOutside(e) {
-  if (e.target.id === 'register-sheet') closeSheet();
-}
-
-function closeSheet() {
-  document.getElementById('register-sheet').style.display = 'none';
-  STATE.farm.pendingCrops = [];
-}
-
-// 바텀시트 스와이프 닫기
-function initSheetSwipe() {
-  const el = document.getElementById('sheet-body');
-  if (!el) return;
-
-  // 이미 초기화됐으면 스킵
-  if (el._swipeInit) return;
-  el._swipeInit = true;
-
-  let startY = 0;
-  let currentY = 0;
-  let startScrollTop = 0;
-  let dragging = false;
-
-  el.addEventListener('touchstart', function(e) {
-    startY = e.touches[0].clientY;
-    startScrollTop = el.scrollTop;
-    dragging = true;
-    el.style.transition = 'none';
-  }, { passive: true });
-
-  el.addEventListener('touchmove', function(e) {
-    if (!dragging) return;
-    currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-    // 스크롤이 맨 위이고 아래로 드래그할 때만 따라옴
-    if (diff > 0 && startScrollTop === 0) {
-      el.style.transform = 'translateY(' + diff + 'px)';
-    }
-  }, { passive: true });
-
-  el.addEventListener('touchend', function(e) {
-    if (!dragging) return;
-    dragging = false;
-    const diff = currentY - startY;
-    el.style.transition = 'transform 0.3s ease';
-    if (diff > 80 && startScrollTop === 0) {
-      // 80px 이상 내리면 닫기
-      el.style.transform = 'translateY(100%)';
-      setTimeout(function() {
-        closeSheet();
-        el.style.transform = 'translateY(0)';
-      }, 300);
+function searchAddress() {
+  var keyword = document.getElementById('jibun-input') && document.getElementById('jibun-input').value.trim();
+  if (!keyword) { alert('주소를 입력하세요'); return; }
+  if (!kakaoGeocoder) return;
+  kakaoGeocoder.addressSearch(keyword, function(result, status) {
+    if (status === kakao.maps.services.Status.OK) {
+      document.getElementById('jibun-input').value = result[0].address_name;
+      var coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+      kakaoMap.setCenter(coords);
+      kakaoMap.setLevel(4);
+      kakaoMarker.setPosition(coords);
+      kakaoMarker.setMap(kakaoMap);
+      fetchParcelInfo(result[0].address_name);
     } else {
-      // 원위치
-      el.style.transform = 'translateY(0)';
+      alert('주소를 찾을 수 없어요');
     }
-  }, { passive: true });
+  });
 }
 
+function findByGPS() {
+  if (!navigator.geolocation) { alert('GPS를 지원하지 않는 기기예요'); return; }
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    if (!kakaoMap || !kakaoGeocoder) return;
+    var coords = new kakao.maps.LatLng(lat, lng);
+    kakaoMap.setCenter(coords);
+    kakaoMap.setLevel(4);
+    kakaoMarker.setPosition(coords);
+    kakaoMarker.setMap(kakaoMap);
+    kakaoGeocoder.coord2Address(lng, lat, function(result, status) {
+      if (status === kakao.maps.services.Status.OK) {
+        var addr = result[0].road_address
+          ? result[0].road_address.address_name
+          : result[0].address.address_name;
+        document.getElementById('jibun-input').value = addr;
+        fetchParcelInfo(addr);
+      }
+    });
+  }, function() { alert('위치 정보를 가져올 수 없어요'); });
+}
+
+async function fetchParcelInfo(address) {
+  var infoEl = document.getElementById('parcel-info');
+  if (!infoEl) return;
+  infoEl.textContent = '토지 정보 조회 중...';
+  try {
+    var res = await fetch('/api/vworld?action=geocode&address=' + encodeURIComponent(address));
+    if (!res.ok) throw new Error('vworld 오류');
+    var data = await res.json();
+    if (!data.pnu) { infoEl.textContent = ''; return; }
+    infoEl.textContent = '토지 정보 불러오는 중...';
+  } catch(e) {
+    infoEl.textContent = '';
+  }
+}
+
+// ── 작물 검색/등록 ──────────────────────────────
 function onCropSearchInput(val) {
-  const autoEl = document.getElementById('crop-autocomplete');
+  var autoEl = document.getElementById('crop-autocomplete');
   if (!autoEl) return;
-  const q = val.trim();
+  var q = val.trim();
   if (!q) { autoEl.style.display = 'none'; return; }
 
-  const matches = FARM_CROPS_DB.filter(function(c) {
-    return c.name.includes(q);
-  });
-
+  var matches = FARM_CROPS_DB.filter(function(c) { return c.name.includes(q); });
   if (!matches.length) { autoEl.style.display = 'none'; return; }
 
   autoEl.style.display = 'block';
   autoEl.innerHTML = matches.map(function(c) {
     return '<div onclick="selectCropFromAuto(\'' + c.name + '\')" ' +
-      'style="padding:10px 12px;font-size:12px;cursor:pointer;border-bottom:0.5px solid #f0f0f0;" ' +
       'style="padding:10px 12px;font-size:12px;cursor:pointer;border-bottom:0.5px solid #f0f0f0;">' +
       '<span style="color:#111;">' + c.name + '</span>' +
       '<span style="font-size:10px;color:#999;margin-left:6px;">' + c.cat + '</span>' +
@@ -425,167 +263,118 @@ function onCropSearchInput(val) {
 }
 
 function selectCropFromAuto(name) {
-  const input = document.getElementById('crop-search-input');
-  const autoEl = document.getElementById('crop-autocomplete');
+  var input = document.getElementById('crop-search-input');
+  var autoEl = document.getElementById('crop-autocomplete');
   if (input) input.value = name;
   if (autoEl) autoEl.style.display = 'none';
 }
 
 function addCropFromSearch() {
-  const nameEl = document.getElementById('crop-search-input');
-  const areaEl = document.getElementById('crop-area-input');
-  const unitEl = document.getElementById('crop-unit-select');
-  const autoEl = document.getElementById('crop-autocomplete');
+  var nameEl = document.getElementById('crop-search-input');
+  var areaEl = document.getElementById('crop-area-input');
+  var unitEl = document.getElementById('crop-unit-select');
+  var autoEl = document.getElementById('crop-autocomplete');
 
-  const name = nameEl ? nameEl.value.trim() : '';
-  const area = areaEl ? areaEl.value.trim() : '';
-  const unit = unitEl ? unitEl.value : '평';
+  var name = nameEl ? nameEl.value.trim() : '';
+  var area = areaEl ? areaEl.value.trim() : '';
+  var unit = unitEl ? unitEl.value : '평';
 
   if (!name) { alert('작물명을 입력하세요'); return; }
 
-  // DB에서 cntntsNo 찾기
-  const found = FARM_CROPS_DB.find(function(c) { return c.name === name; });
-  const cntntsNo = found ? found.cntntsNo : null;
-  const cat = found ? found.cat : '기타';
+  var found = FARM_CROPS_DB.find(function(c) { return c.name === name; });
+  var cntntsNo = found ? found.cntntsNo : null;
+  var cat = found ? found.cat : '기타';
 
   if (!STATE.farm.pendingCrops) STATE.farm.pendingCrops = [];
-
-  // 중복 확인
   if (STATE.farm.pendingCrops.find(function(c) { return c.name === name; })) {
-    alert('이미 추가된 작물이에요');
-    return;
+    alert('이미 추가된 작물이에요'); return;
   }
 
-  STATE.farm.pendingCrops.push({ name, area, unit, cat, cntntsNo });
-
-  // 입력창 초기화
+  STATE.farm.pendingCrops.push({ name: name, area: area, unit: unit, cat: cat, cntntsNo: cntntsNo });
   if (nameEl) nameEl.value = '';
   if (areaEl) areaEl.value = '';
   if (autoEl) autoEl.style.display = 'none';
-
   renderCropList();
 }
 
 function renderCropList() {
-  const listEl = document.getElementById('crop-list');
+  var listEl = document.getElementById('crop-list');
   if (!listEl) return;
-  const crops = STATE.farm.pendingCrops || [];
+  var crops = STATE.farm.pendingCrops || [];
   if (!crops.length) { listEl.innerHTML = ''; return; }
 
-  listEl.innerHTML = '<div style="background:#f8f8f8;border-radius:8px;padding:10px;">' +
+  listEl.innerHTML = '<div style="background:#f8f8f8;border-radius:8px;padding:8px;">' +
     crops.map(function(c, i) {
-      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+      return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;">' +
         '<span style="flex:1;font-size:12px;color:#111;">' + c.name + '</span>' +
         (c.cntntsNo ?
-          '<span style="font-size:9px;color:#2E7D32;background:#EAF3DE;padding:2px 5px;border-radius:4px;">📅월력</span>' :
-          '<span style="font-size:9px;color:#999;background:#f0f0f0;padding:2px 5px;border-radius:4px;">정보없음</span>') +
-        '<input type="number" placeholder="면적" value="' + (c.area||'') + '"' +
+          '<span style="font-size:9px;color:#2E7D32;background:#EAF3DE;padding:2px 4px;border-radius:4px;">📅월력</span>' :
+          '<span style="font-size:9px;color:#999;background:#f0f0f0;padding:2px 4px;border-radius:4px;">정보없음</span>') +
+        '<input type="number" placeholder="면적" value="' + (c.area || '') + '"' +
         ' oninput="updatePendingArea2(' + i + ',this.value)"' +
-        ' style="width:60px;font-size:12px;padding:5px;border:0.5px solid #ddd;border-radius:6px;" />' +
+        ' style="width:55px;font-size:11px;padding:4px;border:0.5px solid #ddd;border-radius:6px;" />' +
         '<select oninput="updatePendingUnit2(' + i + ',this.value)"' +
-        ' style="border:0.5px solid #ddd;border-radius:6px;padding:5px 3px;font-size:11px;color:#666;">' +
-        '<option' + (c.unit==='평'?' selected':'') + '>평</option>' +
-        '<option' + (c.unit==='㎡'?' selected':'') + '>㎡</option>' +
+        ' style="border:0.5px solid #ddd;border-radius:6px;padding:4px 2px;font-size:10px;color:#666;">' +
+        '<option' + (c.unit === '평' ? ' selected' : '') + '>평</option>' +
+        '<option' + (c.unit === '㎡' ? ' selected' : '') + '>㎡</option>' +
         '</select>' +
         '<button onclick="removePendingCrop(' + i + ')" ' +
-        'style="color:#E24B4A;background:none;border:none;font-size:14px;cursor:pointer;padding:0 4px;">×</button>' +
+        'style="color:#E24B4A;background:none;border:none;font-size:14px;cursor:pointer;padding:0 2px;">×</button>' +
         '</div>';
     }).join('') +
     '</div>';
 }
 
 function updatePendingArea2(idx, val) {
-  if (STATE.farm.pendingCrops && STATE.farm.pendingCrops[idx]) {
-    STATE.farm.pendingCrops[idx].area = val;
-  }
+  if (STATE.farm.pendingCrops && STATE.farm.pendingCrops[idx]) STATE.farm.pendingCrops[idx].area = val;
 }
 function updatePendingUnit2(idx, val) {
-  if (STATE.farm.pendingCrops && STATE.farm.pendingCrops[idx]) {
-    STATE.farm.pendingCrops[idx].unit = val;
-  }
+  if (STATE.farm.pendingCrops && STATE.farm.pendingCrops[idx]) STATE.farm.pendingCrops[idx].unit = val;
 }
 function removePendingCrop(idx) {
-  if (STATE.farm.pendingCrops) {
-    STATE.farm.pendingCrops.splice(idx, 1);
-    renderCropList();
-  }
+  if (STATE.farm.pendingCrops) { STATE.farm.pendingCrops.splice(idx, 1); renderCropList(); }
 }
 
-
 function confirmEntry() {
-  const jibun = document.getElementById('jibun-input')?.value.trim();
+  var jibun = document.getElementById('jibun-input') && document.getElementById('jibun-input').value.trim();
   if (!jibun) { alert('지번을 입력하세요'); return; }
-  if (!STATE.farm.pendingCrops || !STATE.farm.pendingCrops.length) { alert('작물을 선택하세요'); return; }
+  if (!STATE.farm.pendingCrops || !STATE.farm.pendingCrops.length) { alert('작물을 추가하세요'); return; }
 
   if (editingJibun) {
-    STATE.farm.crops = STATE.farm.crops.filter(c => c.jibun !== editingJibun);
-    STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== editingJibun);
+    STATE.farm.crops = STATE.farm.crops.filter(function(c) { return c.jibun !== editingJibun; });
+    STATE.farm.lands = STATE.farm.lands.filter(function(l) { return l.jibun !== editingJibun; });
   }
-  if (!STATE.farm.lands.find(l => l.jibun === jibun)) {
-    STATE.farm.lands.push({ jibun, jimok: '밭' });
+  if (!STATE.farm.lands.find(function(l) { return l.jibun === jibun; })) {
+    STATE.farm.lands.push({ jibun: jibun, jimok: '밭' });
   }
-  STATE.farm.pendingCrops.forEach(c => {
-    STATE.farm.crops.push({ ...c, jibun });
+  STATE.farm.pendingCrops.forEach(function(c) {
+    STATE.farm.crops.push(Object.assign({}, c, { jibun: jibun }));
   });
 
   STATE.farm.pendingCrops = [];
   editingJibun = null;
-  saveState();
-  closeSheet();
-  renderMyFarm();
-}
-
-function removeByJibun(jibun) {
-  if (!confirm(`${jibun.split(' ').slice(-2).join(' ')} 토지를 삭제할까요?`)) return;
-  STATE.farm.crops = STATE.farm.crops.filter(c => (c.jibun || '미지정') !== jibun);
-  STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== jibun);
   saveState();
   renderMyFarm();
 }
 
 function deleteLandEntry() {
   if (!editingJibun) return;
-  const name = editingJibun.split(' ').slice(-2).join(' ');
-  if (!confirm(`${name} 토지를 삭제할까요?`)) return;
-  STATE.farm.crops = STATE.farm.crops.filter(c => c.jibun !== editingJibun);
-  STATE.farm.lands = STATE.farm.lands.filter(l => l.jibun !== editingJibun);
+  if (!confirm(editingJibun.split(' ').slice(-2).join(' ') + ' 토지를 삭제할까요?')) return;
+  STATE.farm.crops = STATE.farm.crops.filter(function(c) { return c.jibun !== editingJibun; });
+  STATE.farm.lands = STATE.farm.lands.filter(function(l) { return l.jibun !== editingJibun; });
+  editingJibun = null;
   saveState();
-  closeSheet();
   renderMyFarm();
 }
 
-function findByGPS() {
-  if (!navigator.geolocation) { alert('GPS를 지원하지 않는 기기입니다.'); return; }
-  navigator.geolocation.getCurrentPosition(pos => {
-    const { latitude, longitude } = pos.coords;
-    const coords = new kakao.maps.LatLng(latitude, longitude);
-
-    if (kakaoMap) {
-      kakaoMap.setCenter(coords);
-      kakaoMap.setLevel(3);
-      kakaoMarker.setPosition(coords);
-      kakaoMarker.setMap(kakaoMap);
-    }
-
-    // 좌표 → 주소 변환
-    if (kakaoGeocoder) {
-      kakaoGeocoder.coord2Address(longitude, latitude, function(result, status) {
-        if (status === kakao.maps.services.Status.OK) {
-          const addr = result[0].road_address
-            ? result[0].road_address.address_name
-            : result[0].address.address_name;
-          document.getElementById('jibun-input').value = addr;
-        }
-      });
-    } else {
-      document.getElementById('jibun-input').value = `GPS (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-    }
-  }, () => alert('위치를 가져올 수 없습니다.'));
+function removeByJibun(jibun) {
+  if (!confirm(jibun.split(' ').slice(-2).join(' ') + ' 토지를 삭제할까요?')) return;
+  STATE.farm.crops = STATE.farm.crops.filter(function(c) { return c.jibun !== jibun; });
+  STATE.farm.lands = STATE.farm.lands.filter(function(l) { return l.jibun !== jibun; });
+  saveState();
+  renderMyFarm();
 }
 
-// ════════════════════════════════════════════════════
-// 화면 2 — 오늘의 정보
-// ════════════════════════════════════════════════════
 function renderToday() {
   const el = document.getElementById('screen-today');
   el.innerHTML = `
@@ -912,8 +701,8 @@ function nextMonth() {
   renderWork();
 }
 
-let selectedWorkDate = todayStr();
-let pendingWorks = [];
+selectedWorkDate = todayStr();
+pendingWorks = [];
 
 function selectDate(dateStr) {
   selectedWorkDate = dateStr;
@@ -1059,7 +848,7 @@ function renderAI() {
   if (myCrops.length > 0) showNongsaroInfo(myCrops[0], 0);
 }
 
-let nongsaroCache = {};
+nongsaroCache = {};
 
 async function showNongsaroInfo(cropName, idx) {
   document.querySelectorAll('[id^="nc-btn-"]').forEach(function(btn, i) {
