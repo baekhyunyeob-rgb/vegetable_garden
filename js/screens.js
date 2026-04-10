@@ -141,6 +141,7 @@ function initKakaoMap() {
     kakaoMarker = new kakao.maps.Marker();
     setTimeout(function() { kakaoMap.relayout(); }, 300);
     setTimeout(function() { kakaoMap.relayout(); }, 800);
+    setTimeout(function() { kakaoMap.relayout(); }, 1500);
 
     // 지도 클릭 시 좌표 → 주소 변환
     kakao.maps.event.addListener(kakaoMap, 'click', function(mouseEvent) {
