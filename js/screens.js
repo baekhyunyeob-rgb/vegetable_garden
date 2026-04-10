@@ -292,7 +292,24 @@ function openRegisterSheet() {
   STATE.farm.pendingCrops = [];
   renderCropList();
   initSheetSwipe();
-  setTimeout(() => { initKakaoMap(); }, 800);
+
+  // sheet-body가 올라온 후 지도 초기화
+  var sheetBody = document.getElementById('sheet-body');
+  var mapInited = false;
+  function doInitMap() {
+    if (mapInited) return;
+    mapInited = true;
+    initKakaoMap();
+  }
+  if (sheetBody) {
+    sheetBody.addEventListener('transitionend', function handler(e) {
+      if (e.propertyName === 'transform') {
+        sheetBody.removeEventListener('transitionend', handler);
+        doInitMap();
+      }
+    });
+  }
+  setTimeout(doInitMap, 1000);
 }
 
 function openEditSheet(jibun) {
