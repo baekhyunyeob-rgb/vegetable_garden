@@ -103,26 +103,33 @@ function renderFarmListHTML() {
     byLand[c.jibun].push(c);
   });
 
-  return Object.entries(byLand).map(function(entry) {
+  return Object.entries(byLand).map(function(entry, idx) {
     var jibun = entry[0];
     var crops = entry[1];
-    var totalArea = crops.reduce(function(s, c) { return s + (parseFloat(c.area) || 0); }, 0);
     var unit = crops[0] && crops[0].unit ? crops[0].unit : '평';
     var short = jibun.split(' ').slice(-2).join(' ');
 
-    return '<div style="background:white;border-radius:12px;border:0.5px solid #eee;padding:12px 14px;margin-bottom:8px;">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+    // 지목 정보 (STATE.farm.lands에서)
+    var land = STATE.farm.lands && STATE.farm.lands.find(function(l) { return l.jibun === jibun; });
+    var jimok = land && land.jimok ? land.jimok : '';
+    var landArea = land && land.areaPyeong ? land.areaPyeong + '평' : '';
+    var landInfo = jimok && landArea ? '(' + jimok + ' ' + landArea + ')' : jimok ? '(' + jimok + ')' : '';
+
+    return '<div style="background:white;border-radius:12px;border:0.5px solid #eee;padding:10px 14px;margin-bottom:8px;">' +
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+        // 번호
+        '<span style="font-size:10px;color:white;background:#2E7D32;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + (idx+1) + '</span>' +
+        // 지번
         '<span style="font-size:13px;font-weight:500;">' + short + '</span>' +
-        '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<span style="font-size:11px;color:#999;">총 ' + totalArea + unit + '</span>' +
-          '<button onclick="startEdit(\'' + jibun + '\')" style="font-size:11px;color:#2E7D32;background:none;border:0.5px solid #2E7D32;border-radius:6px;padding:3px 8px;cursor:pointer;">수정</button>' +
-        '</div>' +
-      '</div>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:4px;">' +
+        // 지목+면적
+        (landInfo ? '<span style="font-size:10px;color:#999;">' + landInfo + '</span>' : '') +
+        // 작물 배지들
         crops.map(function(c) {
-          return '<span style="font-size:10px;background:#EAF3DE;color:#2E7D32;padding:3px 8px;border-radius:8px;">' +
+          return '<span style="font-size:10px;background:#EAF3DE;color:#2E7D32;padding:2px 7px;border-radius:8px;">' +
             c.name + ' ' + (c.area || '?') + (c.unit || '평') + '</span>';
         }).join('') +
+        // 수정 버튼
+        '<button onclick="startEdit(\'' + jibun + '\')" style="font-size:11px;color:#2E7D32;background:none;border:0.5px solid #2E7D32;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto;">수정</button>' +
       '</div>' +
     '</div>';
   }).join('');
