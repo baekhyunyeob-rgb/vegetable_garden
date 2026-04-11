@@ -1,3 +1,5 @@
+import https from 'https';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   
@@ -5,14 +7,31 @@ export default async function handler(req, res) {
   if (!cntntsNo) return res.status(400).json({ error: 'cntntsNo required' });
 
   const KEY = '20260409M8NZ3DE2W1X8T00CUUUHCA';
-  const url = 'https://api.nongsaro.go.kr/service/farmWorkingPlanNew/workScheduleEraInfoJsonLst?apiKey=' + KEY + '&cntntsNo=' + cntntsNo;
+  const path = '/service/farmWorkingPlanNew/workScheduleEraInfoJsonLst?apiKey=' + KEY + '&cntntsNo=' + cntntsNo;
 
-  try {
-    const r = await fetch(url, { headers: { 'Accept': 'application/xml' } });
-    const text = await r.text();
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.status(200).send(text);
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.nongsaro.go.kr',
+      port: 443,
+      path: path,
+      method: 'GET',
+    };
+
+    const request = https.request(options, (response) => {
+      let data = '';
+      response.on('data', (chunk) => { data += chunk; });
+      response.on('end', () => {
+        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+        res.status(200).send(data);
+        resolve();
+      });
+    });
+
+    request.on('error', (e) => {
+      res.status(500).json({ error: e.message });
+      resolve();
+    });
+
+    request.end();
+  });
 }
