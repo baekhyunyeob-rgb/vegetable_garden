@@ -1072,12 +1072,12 @@ async function loadFarmSchedule(cntntsNo) {
     rows.forEach(function(row) {
       var cells = row.querySelectorAll('td');
       if (cells.length < 7) return;
-      var infoType = cells[1] ? cells[1].textContent.trim() : '';
+      var infoType = cells[2] ? cells[2].textContent.trim() : '';
       if (!infoType.includes('생육과정')) return; // 주요농작업만
       var opertNm = cells[3] ? cells[3].textContent.trim() : '';
-      var beginMon = parseInt(cells[4] ? cells[4].textContent.trim() : '0') || 0;
+      var beginMon = parseInt((cells[4] ? cells[4].textContent.trim() : '0').replace('월','')) || 0;
       var beginEra = cells[5] ? cells[5].textContent.trim() : '';
-      var endMon = parseInt(cells[6] ? cells[6].textContent.trim() : '0') || 0;
+      var endMon = parseInt((cells[6] ? cells[6].textContent.trim() : '0').replace('월','')) || 0;
       var endEra = cells[7] ? cells[7].textContent.trim() : '';
       if (!opertNm || !beginMon || !endMon) return;
       schedule.push({
