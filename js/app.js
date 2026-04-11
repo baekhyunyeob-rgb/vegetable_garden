@@ -27,6 +27,31 @@ function switchTab(tabId) {
   const [title, sub] = headers[tabId] || ['', ''];
   document.getElementById('header-title').textContent = title;
   document.getElementById('header-sub').textContent = sub;
+
+  // 농작업 탭일 때 작물 배지 표시
+  const badgesEl = document.getElementById('header-badges');
+  if (badgesEl) {
+    if (tabId === 'work') {
+      const crops = STATE.farm.crops.filter(function(c) { return c.cntntsNo; });
+      const unique = [];
+      const seen = {};
+      crops.forEach(function(c) {
+        if (!seen[c.cntntsNo]) { seen[c.cntntsNo] = true; unique.push(c); }
+      });
+      const COLORS = [
+        {bg:'#C8E6C9',color:'#1B5E20'},{bg:'#BBDEFB',color:'#0D47A1'},
+        {bg:'#FFE0B2',color:'#E65100'},{bg:'#F8BBD0',color:'#880E4F'},
+        {bg:'#E1BEE7',color:'#4A148C'},{bg:'#B2EBF2',color:'#006064'},
+        {bg:'#DCEDC8',color:'#33691E'},{bg:'#FFF9C4',color:'#F57F17'},
+      ];
+      badgesEl.innerHTML = unique.map(function(c, i) {
+        var col = COLORS[i % COLORS.length];
+        return '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + col.bg + ';color:' + col.color + ';white-space:nowrap;">' + c.name + '</span>';
+      }).join('');
+    } else {
+      badgesEl.innerHTML = '';
+    }
+  }
 }
 
 function todayMeta() {

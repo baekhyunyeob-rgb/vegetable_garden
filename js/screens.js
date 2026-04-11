@@ -451,24 +451,12 @@ function renderWork() {
   const el = document.getElementById('screen-work');
   const { year, month } = STATE.calendar;
 
-  // 재배력 있는 작물 배지
-  const schedCrops = [...new Map(
-    STATE.farm.crops.filter(c => c.cntntsNo).map((c,i) => [c.cntntsNo, {name:c.name, idx:i}])
-  ).values()];
-  const cropBadges = schedCrops.map(function(c, i) {
-    const col = getCropColor(i);
-    return '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + col.bg + ';color:' + col.color + ';">' + c.name + '</span>';
-  }).join('');
-
   el.innerHTML = `
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <button onclick="prevMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">‹</button>
         <span style="font-size:13px;font-weight:500;">${year}년 ${month}월</span>
-        <div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;">
-          ${cropBadges}
-          <button onclick="nextMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">›</button>
-        </div>
+        <button onclick="nextMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">›</button>
       </div>
 
       ${renderCalendar(year, month)}
@@ -1147,9 +1135,13 @@ async function renderFarmScheduleBadges(year, month) {
       var color = getCropColor(idx);
       schedule.forEach(function(s) {
         if (isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) {
+          var isStart = (s.beginMon === month && eraToDay(s.beginEra) >= d && eraToDay(s.beginEra) < d + 10);
+          var isEnd   = (s.endMon === month && eraToDay(s.endEra) >= d && eraToDay(s.endEra) < d + 10);
+          var arrow = isStart && isEnd ? '' : isStart ? '→' : isEnd ? '←' : '·';
           var badge = document.createElement('div');
-          badge.style.cssText = 'font-size:6px;padding:0 2px;border-radius:2px;margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:' + color.bg + ';color:' + color.color + ';';
-          badge.textContent = s.opertNm;
+          badge.style.cssText = 'font-size:6px;padding:1px 3px;border-radius:3px;margin-top:1px;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';border:0.5px solid ' + color.color + ';background:white;cursor:pointer;';
+          badge.textContent = (isStart ? '' : arrow) + s.opertNm + (isEnd ? '' : (arrow === '·' ? '' : ''));
+          badge.title = crop.name + ': ' + s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
           badgeContainer.appendChild(badge);
         }
       });
