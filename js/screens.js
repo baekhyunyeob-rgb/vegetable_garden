@@ -1149,13 +1149,22 @@ async function renderFarmScheduleBadges(year, month) {
       var color = getCropColor(idx);
       schedule.forEach(function(s) {
         if (isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) {
-          var isStart = (s.beginMon === month && eraToDay(s.beginEra) >= d && eraToDay(s.beginEra) < d + 10);
-          var isEnd   = (s.endMon === month && eraToDay(s.endEra) >= d && eraToDay(s.endEra) < d + 10);
-          var arrow = isStart && isEnd ? '' : isStart ? '→' : isEnd ? '←' : '·';
+          // 시작일/종료일/중간 구분
+          var startDay = eraToDay(s.beginEra);
+          var endDay = eraToDay(s.endEra);
+          var isStart = (s.beginMon === month && d >= startDay && d < startDay + 10);
+          var isEnd   = (s.endMon === month && d >= endDay && d < endDay + 10);
+          var isMid   = !isStart && !isEnd;
+
+          // 중간 기간은 가는 선으로만 표시
           var badge = document.createElement('div');
-          badge.style.cssText = 'font-size:6px;padding:1px 3px;border-radius:3px;margin-top:1px;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';border:0.5px solid ' + color.color + ';background:white;cursor:pointer;';
-          badge.textContent = (isStart ? '' : arrow) + s.opertNm + (isEnd ? '' : (arrow === '·' ? '' : ''));
-          badge.title = crop.name + ': ' + s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
+          if (isMid) {
+            badge.style.cssText = 'height:3px;border-radius:2px;margin-top:3px;background:' + color.bg + ';border:none;';
+          } else {
+            badge.style.cssText = 'font-size:6px;padding:1px 4px;border-radius:4px;margin-top:1px;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;';
+            badge.textContent = s.opertNm;
+          }
+          badge.title = s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
           badgeContainer.appendChild(badge);
         }
       });
