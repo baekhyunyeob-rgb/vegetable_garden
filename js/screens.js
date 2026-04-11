@@ -1056,7 +1056,7 @@ async function loadFarmSchedule(cntntsNo) {
   if (FARM_SCHEDULE_CACHE[cntntsNo]) return FARM_SCHEDULE_CACHE[cntntsNo];
   try {
     const KEY = '20260409M8NZ3DE2W1X8T00CUUUHCA';
-    const url = '/api/schedule?cntntsNo=' + cntntsNo;
+    const url = 'https://api.nongsaro.go.kr/service/farmWorkingPlanNew/workScheduleEraInfoJsonLst?apiKey=' + KEY + '&cntntsNo=' + cntntsNo;
     const res = await fetch(url);
     const text = await res.text();
     const parser = new DOMParser();
