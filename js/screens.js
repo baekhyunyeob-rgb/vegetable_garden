@@ -465,9 +465,12 @@ function renderWork() {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <button onclick="prevMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">‹</button>
         <span style="font-size:13px;font-weight:500;">${year}년 ${month}월</span>
-        <button onclick="nextMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">›</button>
+        <div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;">
+          ${cropBadges}
+          <button onclick="nextMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">›</button>
+        </div>
       </div>
-      ${schedCrops.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">' + cropBadges + '</div>' : ''}
+
       ${renderCalendar(year, month)}
     </div>
 
@@ -1046,11 +1049,26 @@ function getCropColor(idx) {
   return CROP_COLORS[idx % CROP_COLORS.length];
 }
 
+function shortenOpert(opertNm) {
+  var map = {
+    '씨뿌림':'파종', '파종':'파종', '아주심기':'정식', '정식':'정식',
+    '수확':'수확', '시비':'시비', '비료':'시비', '웃거름':'시비',
+    '밑거름':'시비', '방제':'방제', '병해충':'방제', '제초':'제초',
+    '관수':'관수', '물주기':'관수', '모내기':'모내기', '이앙':'모내기',
+    '수분':'수분', '적과':'적과', '전정':'전정', '가지치기':'전정',
+    '멀칭':'멀칭', '터널':'터널', '정지':'정지',
+  };
+  for (var k in map) {
+    if (opertNm.includes(k)) return map[k];
+  }
+  return opertNm.slice(0, 2);
+}
+
 async function loadFarmSchedule(cntntsNo) {
   if (FARM_SCHEDULE_CACHE[cntntsNo]) return FARM_SCHEDULE_CACHE[cntntsNo];
   try {
     const KEY = '20260409M8NZ3DE2W1X8T00CUUUHCA';
-    const url = 'http://api.nongsaro.go.kr/service/farmWorkingPlanNew/workScheduleEraInfoJsonLst?apiKey=' + KEY + '&cntntsNo=' + cntntsNo;
+    const url = '/api/schedule?cntntsNo=' + cntntsNo;
     const res = await fetch(url);
     const text = await res.text();
     const parser = new DOMParser();
@@ -1062,7 +1080,7 @@ async function loadFarmSchedule(cntntsNo) {
         endMon:   parseInt(item.querySelector('endMon') && item.querySelector('endMon').textContent.trim()) || 0,
         beginEra: (item.querySelector('beginEra') && item.querySelector('beginEra').textContent.trim()) || '',
         endEra:   (item.querySelector('endEra') && item.querySelector('endEra').textContent.trim()) || '',
-        opertNm:  (item.querySelector('opertNm') && item.querySelector('opertNm').textContent.trim()) || '',
+        opertNm:  shortenOpert((item.querySelector('opertNm') && item.querySelector('opertNm').textContent.trim()) || ''),
         infoSeCodeNm: (item.querySelector('infoSeCodeNm') && item.querySelector('infoSeCodeNm').textContent.trim()) || '',
       };
     }).filter(function(s) {
