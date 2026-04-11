@@ -1149,21 +1149,20 @@ async function renderFarmScheduleBadges(year, month) {
       var color = getCropColor(idx);
       schedule.forEach(function(s) {
         if (isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) {
-          // 시작일/종료일/중간 구분
+          // 시작일에만 표시
           var startDay = eraToDay(s.beginEra);
-          var endDay = eraToDay(s.endEra);
-          var isStart = (s.beginMon === month && d >= startDay && d < startDay + 10);
-          var isEnd   = (s.endMon === month && d >= endDay && d < endDay + 10);
-          var isMid   = !isStart && !isEnd;
+          var isStart = (s.beginMon === month && d === startDay);
+          if (!isStart) return;
 
-          // 중간 기간은 가는 선으로만 표시
+          // 종료 시기 표시
+          var eraLabel = {'상':'초','중':'중','하':'말'};
+          var endLabel = s.endMon + '월' + (eraLabel[s.endEra] || s.endEra);
+          var sameDay = (s.beginMon === s.endMon && s.beginEra === s.endEra);
+          var label = sameDay ? s.opertNm : s.opertNm + '(~' + endLabel + ')';
+
           var badge = document.createElement('div');
-          if (isMid) {
-            badge.style.cssText = 'height:3px;border-radius:2px;margin-top:3px;background:' + color.bg + ';border:none;';
-          } else {
-            badge.style.cssText = 'font-size:6px;padding:1px 4px;border-radius:4px;margin-top:1px;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;';
-            badge.textContent = s.opertNm;
-          }
+          badge.style.cssText = 'font-size:6px;padding:1px 4px;border-radius:4px;margin-top:1px;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;';
+          badge.textContent = label;
           badge.title = s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
           badgeContainer.appendChild(badge);
         }
