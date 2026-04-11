@@ -1,28 +1,9 @@
-const CACHE = 'textbat-v8';
-const ASSETS = ['/', '/index.html', '/css/style.css', '/js/app.js', '/js/data.js', '/js/screens.js', '/js/nongsaro_db.js', '/js/csv_crop_db.js'];
-
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-  self.skipWaiting();
-});
-
+// 개발 모드 - 캐시 사용 안 함
+self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    Promise.all(keys.map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });
-
-self.addEventListener('fetch', e => {
-  if (e.request.url.includes('/api/') ||
-      e.request.url.includes('vworld.kr') ||
-      e.request.url.includes('kakao') ||
-      e.request.url.includes('nongsaro') ||
-      e.request.url.includes('anthropic') ||
-      e.request.url.includes('data.go.kr')) {
-    return;
-  }
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
-});
+// fetch 이벤트 없음 → 항상 네트워크에서 직접 받아옴

@@ -450,13 +450,24 @@ function renderToday() {
 function renderWork() {
   const el = document.getElementById('screen-work');
   const { year, month } = STATE.calendar;
+
+  // 재배력 있는 작물 배지
+  const schedCrops = [...new Map(
+    STATE.farm.crops.filter(c => c.cntntsNo).map((c,i) => [c.cntntsNo, {name:c.name, idx:i}])
+  ).values()];
+  const cropBadges = schedCrops.map(function(c, i) {
+    const col = getCropColor(i);
+    return '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + col.bg + ';color:' + col.color + ';">' + c.name + '</span>';
+  }).join('');
+
   el.innerHTML = `
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <button onclick="prevMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">‹</button>
         <span style="font-size:13px;font-weight:500;">${year}년 ${month}월</span>
         <button onclick="nextMonth()" style="font-size:20px;color:#2E7D32;background:none;border:none;cursor:pointer;padding:0 6px;">›</button>
       </div>
+      ${schedCrops.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">' + cropBadges + '</div>' : ''}
       ${renderCalendar(year, month)}
     </div>
 
@@ -484,6 +495,8 @@ function renderWork() {
     </div>
   `;
   loadWeather();
+  // 재배력 배지 로드
+  renderFarmScheduleBadges(STATE.calendar.year, STATE.calendar.month);
 }
 
 function getWeatherIcon(sky, pty) {
@@ -671,19 +684,18 @@ function renderCalendar(year, month) {
     const works = STATE.calendar.works[dateStr] || [];
     const wIcon = isPast ? '☀️' : '🌤';
     cells += `
-      <div onclick="selectDate('${dateStr}')"
-        style="min-height:44px;padding:2px;border:0.5px dashed #eee;cursor:pointer;${isToday?'background:#F1F8E9;border-color:#2E7D32;':''}">
+      <div onclick="selectDate('${dateStr}')" data-date="${dateStr}"
+        style="min-height:48px;padding:2px;border:0.5px dashed #eee;cursor:pointer;${isToday?'background:#F1F8E9;border-color:#2E7D32;':''}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           ${isToday
             ? `<div style="width:15px;height:15px;border-radius:50%;background:#2E7D32;color:white;font-size:8px;display:flex;align-items:center;justify-content:center;">${d}</div>`
             : `<span style="font-size:9px;color:${dow===0?'#E24B4A':dow===6?'#378ADD':'#111'};">${d}</span>`
           }
-          <span style="font-size:8px;">${wIcon}</span>
         </div>
-        ${works.slice(0,2).map(w => `
+        <div class="schedule-badges"></div>
+        ${works.slice(0,1).map(w => `
           <div style="display:flex;align-items:center;gap:1px;margin-top:1px;overflow:hidden;">
-            <span class="badge ${getCropBadgeClass(w.cropName)}" style="font-size:6px;padding:0 2px;">${w.cropName}</span>
-            <span style="font-size:7px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"> ${w.workType}</span>
+            <span style="font-size:6px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${w.workType}</span>
           </div>
         `).join('')}
       </div>
@@ -1012,5 +1024,117 @@ async function runAI() {
     msgEl.textContent = 'AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
     msgEl.style.color = '#999';
     console.error(e);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// 재배력 연동 (farmWorkingPlanNew)
+// ════════════════════════════════════════════════════
+const FARM_SCHEDULE_CACHE = {};
+const CROP_COLORS = [
+  {bg:'#C8E6C9', color:'#1B5E20'},
+  {bg:'#BBDEFB', color:'#0D47A1'},
+  {bg:'#FFE0B2', color:'#E65100'},
+  {bg:'#F8BBD0', color:'#880E4F'},
+  {bg:'#E1BEE7', color:'#4A148C'},
+  {bg:'#B2EBF2', color:'#006064'},
+  {bg:'#DCEDC8', color:'#33691E'},
+  {bg:'#FFF9C4', color:'#F57F17'},
+];
+
+function getCropColor(idx) {
+  return CROP_COLORS[idx % CROP_COLORS.length];
+}
+
+async function loadFarmSchedule(cntntsNo) {
+  if (FARM_SCHEDULE_CACHE[cntntsNo]) return FARM_SCHEDULE_CACHE[cntntsNo];
+  try {
+    const KEY = '20260409M8NZ3DE2W1X8T00CUUUHCA';
+    const url = 'http://api.nongsaro.go.kr/service/farmWorkingPlanNew/workScheduleEraInfoJsonLst?apiKey=' + KEY + '&cntntsNo=' + cntntsNo;
+    const res = await fetch(url);
+    const text = await res.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item'));
+    const schedule = items.map(function(item) {
+      return {
+        beginMon: parseInt(item.querySelector('beginMon') && item.querySelector('beginMon').textContent.trim()) || 0,
+        endMon:   parseInt(item.querySelector('endMon') && item.querySelector('endMon').textContent.trim()) || 0,
+        beginEra: (item.querySelector('beginEra') && item.querySelector('beginEra').textContent.trim()) || '',
+        endEra:   (item.querySelector('endEra') && item.querySelector('endEra').textContent.trim()) || '',
+        opertNm:  (item.querySelector('opertNm') && item.querySelector('opertNm').textContent.trim()) || '',
+        infoSeCodeNm: (item.querySelector('infoSeCodeNm') && item.querySelector('infoSeCodeNm').textContent.trim()) || '',
+      };
+    }).filter(function(s) {
+      // 주요농작업만 (환경/병/해충 제외)
+      return s.infoSeCodeNm.includes('주요농작업');
+    });
+    FARM_SCHEDULE_CACHE[cntntsNo] = schedule;
+    return schedule;
+  } catch(e) {
+    return [];
+  }
+}
+
+function eraToDay(era) {
+  if (era === '상') return 10;
+  if (era === '중') return 20;
+  return 28;
+}
+
+function isInSchedule(month, day, beginMon, beginEra, endMon, endEra) {
+  var beginDay = eraToDay(beginEra);
+  var endDay = eraToDay(endEra);
+  var cur = month * 100 + day;
+  var begin = beginMon * 100 + beginDay;
+  var end = endMon * 100 + endDay;
+  if (begin <= end) {
+    return cur >= begin && cur <= end;
+  } else {
+    // 연도 넘어가는 경우 (예: 11월~2월)
+    return cur >= begin || cur <= end;
+  }
+}
+
+// 캘린더에 재배력 배지 추가
+async function renderFarmScheduleBadges(year, month) {
+  // cntntsNo 있는 작물만
+  var crops = STATE.farm.crops.filter(function(c) { return c.cntntsNo; });
+  var unique = [];
+  var seen = {};
+  crops.forEach(function(c) {
+    if (!seen[c.cntntsNo]) { seen[c.cntntsNo] = true; unique.push(c); }
+  });
+
+  if (!unique.length) return;
+
+  // 각 작물 일정 로드
+  var schedules = await Promise.all(unique.map(function(c) {
+    return loadFarmSchedule(c.cntntsNo);
+  }));
+
+  // 날짜별로 배지 삽입
+  var lastDate = new Date(year, month, 0).getDate();
+  for (var d = 1; d <= lastDate; d++) {
+    var dateStr = year + '-' + String(month).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var cell = document.querySelector('[data-date="' + dateStr + '"]');
+    if (!cell) continue;
+
+    var badgeContainer = cell.querySelector('.schedule-badges');
+    if (!badgeContainer) continue;
+    badgeContainer.innerHTML = '';
+
+    unique.forEach(function(crop, idx) {
+      var schedule = schedules[idx] || [];
+      var color = getCropColor(idx);
+      schedule.forEach(function(s) {
+        if (isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) {
+          var badge = document.createElement('div');
+          badge.style.cssText = 'font-size:6px;padding:0 2px;border-radius:2px;margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:' + color.bg + ';color:' + color.color + ';';
+          badge.textContent = s.opertNm;
+          badgeContainer.appendChild(badge);
+        }
+      });
+    });
   }
 }
