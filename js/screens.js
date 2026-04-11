@@ -1059,26 +1059,36 @@ function shortenOpert(opertNm) {
 async function loadFarmSchedule(cntntsNo) {
   if (FARM_SCHEDULE_CACHE[cntntsNo]) return FARM_SCHEDULE_CACHE[cntntsNo];
   try {
-    const KEY = '20260409M8NZ3DE2W1X8T00CUUUHCA';
     const url = '/api/schedule?cntntsNo=' + cntntsNo;
     const res = await fetch(url);
-    const text = await res.text();
+    const html = await res.text();
+
+    // HTML 테이블 파싱
     const parser = new DOMParser();
-    const xml = parser.parseFromString(text, 'text/xml');
-    const items = Array.from(xml.querySelectorAll('item'));
-    const schedule = items.map(function(item) {
-      return {
-        beginMon: parseInt(item.querySelector('beginMon') && item.querySelector('beginMon').textContent.trim()) || 0,
-        endMon:   parseInt(item.querySelector('endMon') && item.querySelector('endMon').textContent.trim()) || 0,
-        beginEra: (item.querySelector('beginEra') && item.querySelector('beginEra').textContent.trim()) || '',
-        endEra:   (item.querySelector('endEra') && item.querySelector('endEra').textContent.trim()) || '',
-        opertNm:  shortenOpert((item.querySelector('opertNm') && item.querySelector('opertNm').textContent.trim()) || ''),
-        infoSeCodeNm: (item.querySelector('infoSeCodeNm') && item.querySelector('infoSeCodeNm').textContent.trim()) || '',
-      };
-    }).filter(function(s) {
-      // 주요농작업만 (환경/병/해충 제외)
-      return s.infoSeCodeNm.includes('주요농작업');
+    const doc = parser.parseFromString(html, 'text/html');
+    const rows = Array.from(doc.querySelectorAll('table tr')).slice(1); // 헤더 제외
+
+    const schedule = [];
+    rows.forEach(function(row) {
+      var cells = row.querySelectorAll('td');
+      if (cells.length < 7) return;
+      var infoType = cells[1] ? cells[1].textContent.trim() : '';
+      if (!infoType.includes('생육과정')) return; // 주요농작업만
+      var opertNm = cells[3] ? cells[3].textContent.trim() : '';
+      var beginMon = parseInt(cells[4] ? cells[4].textContent.trim() : '0') || 0;
+      var beginEra = cells[5] ? cells[5].textContent.trim() : '';
+      var endMon = parseInt(cells[6] ? cells[6].textContent.trim() : '0') || 0;
+      var endEra = cells[7] ? cells[7].textContent.trim() : '';
+      if (!opertNm || !beginMon || !endMon) return;
+      schedule.push({
+        beginMon: beginMon,
+        endMon: endMon,
+        beginEra: beginEra,
+        endEra: endEra,
+        opertNm: shortenOpert(opertNm),
+      });
     });
+
     FARM_SCHEDULE_CACHE[cntntsNo] = schedule;
     return schedule;
   } catch(e) {
