@@ -241,14 +241,45 @@ async function fetchParcelInfo(address) {
   var infoEl = document.getElementById('parcel-info');
   if (!infoEl) return;
   infoEl.textContent = '토지 정보 조회 중...';
+
   try {
-    var res = await fetch('/api/vworld?action=geocode&address=' + encodeURIComponent(address));
-    if (!res.ok) throw new Error('vworld 오류');
-    var data = await res.json();
-    if (!data.pnu) { infoEl.textContent = ''; return; }
-    infoEl.textContent = '토지 정보 불러오는 중...';
+    // 1단계: 주소 → 좌표+PNU
+    var res1 = await fetch('/api/vworld?action=geocode&address=' + encodeURIComponent(address));
+    if (!res1.ok) throw new Error('geocode 실패');
+    var geo = await res1.json();
+
+    var result = geo?.response?.result;
+    if (!result || !result.point) { infoEl.textContent = '주소를 찾을 수 없어요'; return; }
+
+    var pnu = result.refined?.extendedMap?.고유번호;
+    if (!pnu) { infoEl.textContent = '필지 정보를 찾을 수 없어요'; return; }
+
+    infoEl.textContent = '필지 정보 불러오는 중...';
+
+    // 2단계: PNU → 토지특성 (면적·지목)
+    var res2 = await fetch('/api/vworld?action=landinfo&pnu=' + encodeURIComponent(pnu));
+    if (!res2.ok) throw new Error('landinfo 실패');
+    var land = await res2.json();
+
+    var item = land?.landCharacteristicList?.field?.[0];
+    if (!item) { infoEl.textContent = '토지 정보 없음'; return; }
+
+    var jimok   = item.lndcgrCodeNm || '';   // 지목명 (전·답·대·임야 등)
+    var areaSqm = parseFloat(item.lndpclAr) || 0;  // 면적(㎡)
+    var areaPyeong = Math.round(areaSqm / 3.305785);
+
+    // STATE에 저장 (등록 완료 시 활용)
+    STATE.farm.currentParcel = { address, pnu, jimok, areaSqm, areaPyeong };
+
+    // 화면에 표시
+    infoEl.innerHTML =
+      '<span style="color:#2E7D32;font-weight:500;">' + jimok + '</span>' +
+      ' · ' + areaSqm.toLocaleString() + '㎡ (' + areaPyeong.toLocaleString() + '평)' +
+      '<span style="color:#bbb;"> · PNU: ' + pnu + '</span>';
+
   } catch(e) {
-    infoEl.textContent = '';
+    console.warn('토지정보 조회 실패:', e);
+    infoEl.textContent = '토지 정보를 불러올 수 없어요';
   }
 }
 
@@ -355,7 +386,14 @@ function confirmEntry() {
     STATE.farm.lands = STATE.farm.lands.filter(function(l) { return l.jibun !== editingJibun; });
   }
   if (!STATE.farm.lands.find(function(l) { return l.jibun === jibun; })) {
-    STATE.farm.lands.push({ jibun: jibun, jimok: '밭' });
+    var parcel = STATE.farm.currentParcel;
+    STATE.farm.lands.push({
+      jibun:      jibun,
+      pnu:        parcel ? parcel.pnu        : null,
+      jimok:      parcel ? parcel.jimok      : '',
+      areaSqm:    parcel ? parcel.areaSqm    : null,
+      areaPyeong: parcel ? parcel.areaPyeong : null,
+    });
   }
   STATE.farm.pendingCrops.forEach(function(c) {
     STATE.farm.crops.push(Object.assign({}, c, { jibun: jibun }));
@@ -665,7 +703,7 @@ function renderCalendar(year, month) {
     ).join('') + '</div>';
 
   let cells = '<div style="display:grid;grid-template-columns:repeat(7,1fr);">';
-  for (let i = 0; i < firstDay; i++) cells += '<div style="min-height:44px;border:0.5px dashed transparent;"></div>';
+  for (let i = 0; i < firstDay; i++) cells += '<div style="min-height:40px;border:0.5px dashed transparent;"></div>';
 
   for (let d = 1; d <= lastDate; d++) {
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -676,7 +714,7 @@ function renderCalendar(year, month) {
     const wIcon = isPast ? '☀️' : '🌤';
     cells += `
       <div onclick="selectDate('${dateStr}')" data-date="${dateStr}"
-        style="min-height:48px;padding:2px;border:0.5px dashed #eee;cursor:pointer;${isToday?'background:#F1F8E9;border-color:#2E7D32;':''}">
+        style="min-height:40px;padding:2px;border:0.5px dashed #eee;cursor:pointer;${isToday?'background:#F1F8E9;border-color:#2E7D32;':''}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           ${isToday
             ? `<div style="width:15px;height:15px;border-radius:50%;background:#2E7D32;color:white;font-size:8px;display:flex;align-items:center;justify-content:center;">${d}</div>`
@@ -694,12 +732,7 @@ function renderCalendar(year, month) {
   }
   cells += '</div>';
 
-  const legend = `
-    <div style="display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:0.5px solid #eee;flex-wrap:wrap;align-items:center;">
-      ${STATE.farm.crops.slice(0,4).map(c => `<span class="badge ${c.badgeClass}" style="font-size:7px;">${c.name}</span>`).join('')}
-      <div style="margin-left:auto;font-size:9px;color:#999;">지난날 기록 · 이후 예보</div>
-    </div>
-  `;
+  const legend = "";
   return dayLabels + cells + legend;
 }
 
@@ -1161,7 +1194,7 @@ async function renderFarmScheduleBadges(year, month) {
           var label = sameDay ? s.opertNm : s.opertNm + '(~' + endLabel + ')';
 
           var badge = document.createElement('div');
-          badge.style.cssText = 'font-size:6px;padding:1px 4px;border-radius:4px;margin-top:1px;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;';
+          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;margin-top:0;line-height:1.3;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;';
           badge.textContent = label;
           badge.title = s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
           badgeContainer.appendChild(badge);
