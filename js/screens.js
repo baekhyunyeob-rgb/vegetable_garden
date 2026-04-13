@@ -12,6 +12,38 @@ let selectedWorkDate = todayStr();
 let pendingWorks = [];
 let nongsaroCache = {};
 
+// ── 팜맵 JSONP 직접 호출 ────────────────────────
+function fetchFarmmapByPnu(pnu, callback) {
+  const KEY = '5CruaVMo0Pnm2aKHdFL4';
+  const DOMAIN = 'https://kitchen-garden.vercel.app';
+  const cbName = 'farmmapCb_' + Date.now();
+
+  window[cbName] = function(data) {
+    delete window[cbName];
+    document.getElementById('farmmap-script') && document.getElementById('farmmap-script').remove();
+    callback(data);
+  };
+
+  const params = new URLSearchParams({
+    apiKey: KEY,
+    domain: DOMAIN,
+    pnu: pnu,
+    mapType: 'farmmap',
+    columnType: 'KOR',
+    apiVersion: 'v2',
+    callback: cbName
+  });
+
+  const script = document.createElement('script');
+  script.id = 'farmmap-script';
+  script.src = 'https://agis.epis.or.kr/ASD/farmmapApi/getFarmmapDataSeachPnu.do?' + params;
+  script.onerror = function() {
+    delete window[cbName];
+    callback(null);
+  };
+  document.head.appendChild(script);
+}
+
 // ══════════════════════════════════════════════
 // 1. 내 텃밭 탭
 // ══════════════════════════════════════════════
@@ -1368,4 +1400,19 @@ async function renderFarmScheduleBadges(year, month) {
       });
     });
   }
+}
+
+
+// ── 팜맵 테스트 ─────────────────────────────────
+function testFarmmap() {
+  const pnu = '4477034036100410000';
+  console.log('팜맵 JSONP 테스트 시작:', pnu);
+  fetchFarmmapByPnu(pnu, function(data) {
+    console.log('팜맵 응답:', JSON.stringify(data));
+    if (data && data.output && data.output.farmmapData) {
+      alert('팜맵 성공! 개수: ' + data.output.farmmapData.count);
+    } else {
+      alert('팜맵 응답: ' + JSON.stringify(data).slice(0, 200));
+    }
+  });
 }
