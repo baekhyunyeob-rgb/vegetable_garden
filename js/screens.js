@@ -509,10 +509,10 @@ function renderToday() {
       <div class="card-title"><span class="ct">관련 기관</span></div>
       ${[
         {badge:'서천군', cls:'#EEEDFE', tc:'#3C3489', label:'공지사항', url:'https://www.seocheon.go.kr/cop/bbs/BBSMSTR_000000000056/selectBoardList.do'},
-        {badge:'서천군', cls:'#EEEDFE', tc:'#3C3489', label:'일반공고', url:'https://www.seocheon.go.kr/cop/bbs/BBSMSTR_000000000057/selectBoardList.do'},
-        {badge:'서천농기센', cls:'#E6F1FB', tc:'#0C447C', label:'공지사항', url:'https://www.seocheon.go.kr/agri/selectBbsNttList.do?key=2599&bbsNo=13'},
+        {badge:'서천군', cls:'#EEEDFE', tc:'#3C3489', label:'일반공고', url:'https://seocheon.go.kr/kor/sub04_06_06.do'},
+        {badge:'서천농기센', cls:'#E6F1FB', tc:'#0C447C', label:'공지사항', url:'https://www.seocheon.go.kr/farm.do'},
         {badge:'충남농기원', cls:'#EAF3DE', tc:'#27500A', label:'공지사항', url:'https://cnnongup.chungnam.go.kr/board/B0013.cs?m=315'},
-        {badge:'치유농업ON', cls:'#FAEEDA', tc:'#633806', label:'홈페이지', url:'https://www.chiyunongup.or.kr'},
+        {badge:'치유농업ON', cls:'#FAEEDA', tc:'#633806', label:'홈페이지', url:'https://www.agrohealing.go.kr'},
       ].map(o => `
         <div class="link-row" onclick="window.open('${o.url}')">
           <span style="font-size:9px;padding:2px 5px;border-radius:4px;font-weight:500;background:${o.cls};color:${o.tc};white-space:nowrap;width:58px;text-align:center;">${o.badge}</span>
