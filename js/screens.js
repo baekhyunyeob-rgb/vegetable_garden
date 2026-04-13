@@ -508,15 +508,15 @@ function renderToday() {
     <div class="card">
       <div class="card-title"><span class="ct">관련 기관</span></div>
       ${[
-        {badge:'충남농기원', cls:'#EAF3DE', tc:'#27500A', notice:'봄철 토양관리 기술지원 안내', date:'04.03', url:'https://www.cnnongup.kr'},
-        {badge:'서천농기센', cls:'#E6F1FB', tc:'#0C447C', notice:'귀농인 병해충 방제 교육 신청', date:'04.02', url:'https://www.seocheon.go.kr'},
-        {badge:'치유농업ON', cls:'#FAEEDA', tc:'#633806', notice:'2026 치유농업 체험프로그램 모집', date:'04.01', url:'https://www.chiyunongup.or.kr'},
-        {badge:'서천군',    cls:'#EEEDFE', tc:'#3C3489', notice:'친환경농업 직불금 신청 안내', date:'04.01', url:'https://www.seocheon.go.kr'},
+        {badge:'서천군', cls:'#EEEDFE', tc:'#3C3489', label:'공지사항', url:'https://www.seocheon.go.kr/cop/bbs/BBSMSTR_000000000056/selectBoardList.do'},
+        {badge:'서천군', cls:'#EEEDFE', tc:'#3C3489', label:'일반공고', url:'https://www.seocheon.go.kr/cop/bbs/BBSMSTR_000000000057/selectBoardList.do'},
+        {badge:'서천농기센', cls:'#E6F1FB', tc:'#0C447C', label:'공지사항', url:'https://www.seocheon.go.kr/agri/selectBbsNttList.do?key=2599&bbsNo=13'},
+        {badge:'충남농기원', cls:'#EAF3DE', tc:'#27500A', label:'공지사항', url:'https://cnnongup.chungnam.go.kr/board/B0013.cs?m=315'},
+        {badge:'치유농업ON', cls:'#FAEEDA', tc:'#633806', label:'홈페이지', url:'https://www.chiyunongup.or.kr'},
       ].map(o => `
         <div class="link-row" onclick="window.open('${o.url}')">
           <span style="font-size:9px;padding:2px 5px;border-radius:4px;font-weight:500;background:${o.cls};color:${o.tc};white-space:nowrap;width:58px;text-align:center;">${o.badge}</span>
-          <span style="flex:1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.notice}</span>
-          <span style="font-size:10px;color:#999;white-space:nowrap;">${o.date}</span>
+          <span style="flex:1;font-size:12px;color:#444;">${o.label}</span>
           <span class="link-arrow">›</span>
         </div>
       `).join('')}
