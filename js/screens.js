@@ -734,41 +734,55 @@ async function loadWeather() {
 
 
 function renderWeatherGraph(el, slots) {
+  // 3일치 (12슬롯) 제한
+  slots = slots.slice(0, 12);
+
   const temps = slots.map(s => parseFloat(s.TMP) || 0);
   const minT = Math.min(...temps) - 2;
   const maxT = Math.max(...temps) + 2;
   const range = maxT - minT || 1;
 
-  const W = 320, H = 100, padL = 24, padR = 8, padT = 10, padB = 30;
-  const gW = W - padL - padR;
-  const gH = H - padT - padB;
+  // 포인트 간격 줄여서 폭 축소 (xStep 22→18)
+  const padL = 24, padR = 8, padT = 14, padB = 32;
+  const xStep = 22;
   const n = slots.length;
-  const xStep = gW / (n - 1);
+  const W = padL + xStep * (n - 1) + padR;
+  const H = 110;
+  const gH = H - padT - padB;
 
   const xPos = (i) => padL + i * xStep;
   const yPos = (t) => padT + gH - ((t - minT) / range) * gH;
 
-  // 선 path
   const linePath = slots.map((s, i) => {
     const x = xPos(i);
     const y = yPos(parseFloat(s.TMP) || 0);
     return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
   }).join(' ');
 
-  // 채우기 path
   const fillPath = linePath
     + ' L' + xPos(n-1).toFixed(1) + ',' + (padT+gH)
     + ' L' + padL.toFixed(1) + ',' + (padT+gH) + ' Z';
 
-  // 날짜 구분선
+  // 날짜 구분선 + 날짜 라벨 위치 수집
   let dateDividers = '';
+  let dateLabels = '';
   let prevDate = '';
   slots.forEach((s, i) => {
-    if (s.date !== prevDate && i > 0) {
-      const x = xPos(i).toFixed(1);
-      dateDividers += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+gH}" stroke="#eee" stroke-width="1" stroke-dasharray="3,2"/>`;
+    if (s.date !== prevDate) {
+      if (i > 0) {
+        // 날짜 경계 점선 (더 진하게)
+        const x = xPos(i).toFixed(1);
+        dateDividers += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+gH}" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>`;
+      }
+      // 날짜 라벨 (강조) — 해당 날의 첫 슬롯 중앙에
+      const mm = parseInt(s.date.slice(4,6));
+      const dd = parseInt(s.date.slice(6,8));
+      const dow = ['일','월','화','수','목','금','토'][new Date(
+        parseInt(s.date.slice(0,4)), mm-1, dd).getDay()];
+      const labelX = i < n-1 ? ((xPos(i) + xPos(Math.min(i+3, n-1))) / 2).toFixed(1) : xPos(i).toFixed(1);
+      dateLabels += `<text x="${labelX}" y="${(H-4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="600" fill="#444">${mm}/${dd} ${dow}</text>`;
+      prevDate = s.date;
     }
-    prevDate = s.date;
   });
 
   // 포인트 + 아이콘 + 라벨
@@ -780,17 +794,18 @@ function renderWeatherGraph(el, slots) {
     const icon = getWeatherIcon(s.SKY, s.PTY);
     const pop = parseInt(s.POP || 0);
     const isNewDay = i === 0 || s.date !== slots[i-1].date;
-    const mm = s.date.slice(4,6), dd = s.date.slice(6,8);
-    const label = isNewDay ? `${parseInt(mm)}/${parseInt(dd)}` : `${parseInt(h)}시`;
     const popColor = pop >= 60 ? '#378ADD' : pop >= 30 ? '#7BB8E8' : '#ccc';
 
-    points += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#2E7D32"/>`;
-    icons += `<text x="${x.toFixed(1)}" y="${(padT-2).toFixed(1)}" text-anchor="middle" font-size="12">${icon}</text>`;
-    labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+12).toFixed(1)}" text-anchor="middle" font-size="8" fill="#999">${label}</text>`;
-    labels += `<text x="${x.toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="8" fill="#2E7D32">${(parseFloat(s.TMP)||0).toFixed(0)}°</text>`;
-    if (pop > 0) {
-      labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+22).toFixed(1)}" text-anchor="middle" font-size="7" fill="${popColor}">${pop}%</text>`;
+    // 시간 라벨 (날짜 첫 슬롯은 생략 — 날짜라벨로 대체)
+    if (!isNewDay) {
+      labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+12).toFixed(1)}" text-anchor="middle" font-size="7" fill="#bbb">${parseInt(h)}시</text>`;
     }
+    labels += `<text x="${x.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" font-size="8" fill="#2E7D32">${(parseFloat(s.TMP)||0).toFixed(0)}°</text>`;
+    if (pop > 0) {
+      labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+21).toFixed(1)}" text-anchor="middle" font-size="7" fill="${popColor}">${pop}%</text>`;
+    }
+    points += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#2E7D32"/>`;
+    icons += `<text x="${x.toFixed(1)}" y="${(padT-2).toFixed(1)}" text-anchor="middle" font-size="11">${icon}</text>`;
   });
 
   el.innerHTML = `
@@ -804,10 +819,11 @@ function renderWeatherGraph(el, slots) {
         </defs>
         ${dateDividers}
         <path d="${fillPath}" fill="url(#tempGrad)"/>
-        <path d="${linePath}" fill="none" stroke="#2E7D32" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="${linePath}" fill="none" stroke="#2E7D32" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
         ${icons}
         ${points}
         ${labels}
+        ${dateLabels}
       </svg>
     </div>
   `;
