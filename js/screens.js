@@ -736,98 +736,126 @@ async function loadWeather() {
 function renderWeatherGraph(el, slots) {
   // 3일치 (12슬롯) 제한
   slots = slots.slice(0, 12);
+  const n = slots.length;
+  if (!n) return;
 
   const temps = slots.map(s => parseFloat(s.TMP) || 0);
   const minT = Math.min(...temps) - 2;
   const maxT = Math.max(...temps) + 2;
   const range = maxT - minT || 1;
 
-  // 포인트 간격 줄여서 폭 축소 (xStep 22→18)
-  const padL = 24, padR = 8, padT = 14, padB = 32;
-  const xStep = 26;
-  const n = slots.length;
+  // 레이아웃
+  const xStep = 28;
+  const padL = 20, padR = 8;
   const W = padL + xStep * (n - 1) + padR;
-  const H = 110;
-  const gH = H - padT - padB;
 
+  // 높이 구역 정의
+  const iconY   = 14;   // 아이콘 중심
+  const graphT  = 24;   // 그래프 상단
+  const graphB  = 80;   // 그래프 하단
+  const popY    = 92;   // 강수확률 텍스트
+  const timeY   = 104;  // 시간 텍스트
+  const dateH   = 16;   // 날짜 띠 높이
+  const H       = timeY + dateH + 2;
+
+  const gH = graphB - graphT;
   const xPos = (i) => padL + i * xStep;
-  const yPos = (t) => padT + gH - ((t - minT) / range) * gH;
+  const yPos = (t) => graphT + gH - ((t - minT) / range) * gH;
 
+  // 기온선
   const linePath = slots.map((s, i) => {
-    const x = xPos(i);
-    const y = yPos(parseFloat(s.TMP) || 0);
+    const x = xPos(i), y = yPos(parseFloat(s.TMP) || 0);
     return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
   }).join(' ');
-
   const fillPath = linePath
-    + ' L' + xPos(n-1).toFixed(1) + ',' + (padT+gH)
-    + ' L' + padL.toFixed(1) + ',' + (padT+gH) + ' Z';
+    + ' L' + xPos(n-1).toFixed(1) + ',' + graphB
+    + ' L' + padL.toFixed(1) + ',' + graphB + ' Z';
 
-  // 날짜 구분선 + 날짜 라벨 위치 수집
-  let dateDividers = '';
-  let dateLabels = '';
+  // 날짜 띠 (교대 배경)
+  let dateBands = '';
+  let dateTexts = '';
+  let dividers = '';
+  let dayStarts = []; // [{i, date}]
   let prevDate = '';
   slots.forEach((s, i) => {
     if (s.date !== prevDate) {
-      if (i > 0) {
-        // 날짜 경계 점선 (더 진하게)
-        const x = xPos(i).toFixed(1);
-        dateDividers += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+gH}" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>`;
-      }
-      // 날짜 라벨 (강조) — 해당 날의 첫 슬롯 중앙에
-      const mm = parseInt(s.date.slice(4,6));
-      const dd = parseInt(s.date.slice(6,8));
-      const dow = ['일','월','화','수','목','금','토'][new Date(
-        parseInt(s.date.slice(0,4)), mm-1, dd).getDay()];
-      const labelX = i < n-1 ? ((xPos(i) + xPos(Math.min(i+3, n-1))) / 2).toFixed(1) : xPos(i).toFixed(1);
-      dateLabels += `<text x="${labelX}" y="${(H-4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="600" fill="#444">${mm}/${dd} ${dow}</text>`;
+      dayStarts.push({ i, date: s.date });
       prevDate = s.date;
     }
   });
+  dayStarts.forEach((d, di) => {
+    const x1 = xPos(d.i) - xStep/2;
+    const nextI = dayStarts[di+1] ? dayStarts[di+1].i : n;
+    const x2 = xPos(nextI-1) + xStep/2;
+    const bw = x2 - x1;
+    const bandY = timeY + 4;
+    // 교대 배경
+    const bgColor = di % 2 === 0 ? '#f0f4f0' : '#e8f0e8';
+    dateBands += `<rect x="${x1.toFixed(1)}" y="${bandY}" width="${bw.toFixed(1)}" height="${dateH}" fill="${bgColor}" rx="3"/>`;
+    // 날짜 텍스트
+    const mm = parseInt(d.date.slice(4,6));
+    const dd = parseInt(d.date.slice(6,8));
+    const dow = ['일','월','화','수','목','금','토'][new Date(parseInt(d.date.slice(0,4)), mm-1, dd).getDay()];
+    const cx = ((x1 + x2) / 2).toFixed(1);
+    const dowColor = dow === '일' ? '#E24B4A' : dow === '토' ? '#378ADD' : '#333';
+    dateTexts += `<text x="${cx}" y="${(bandY + dateH - 4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="600" fill="${dowColor}">${mm}/${dd} ${dow}</text>`;
+    // 날짜 경계 점선 (첫날 제외)
+    if (di > 0) {
+      const dx = xPos(d.i) - xStep/2;
+      dividers += `<line x1="${dx.toFixed(1)}" y1="${graphT}" x2="${dx.toFixed(1)}" y2="${timeY+4+dateH}" stroke="#ddd" stroke-width="0.5" stroke-dasharray="3,2"/>`;
+    }
+  });
 
-  // 포인트 + 아이콘 + 라벨
-  let points = '', labels = '', icons = '';
+  // 포인트 + 아이콘 + 기온 + 강수확률 + 시간
+  let points = '', tempLabels = '', icons = '', popLabels = '', timeLabels = '';
   slots.forEach((s, i) => {
     const x = xPos(i);
     const y = yPos(parseFloat(s.TMP) || 0);
-    const h = String(s.time).slice(0,2);
+    const h = parseInt(String(s.time).slice(0,2));
     const icon = getWeatherIcon(s.SKY, s.PTY);
     const pop = parseInt(s.POP || 0);
-    const isNewDay = i === 0 || s.date !== slots[i-1].date;
-    const popColor = pop >= 60 ? '#378ADD' : pop >= 30 ? '#7BB8E8' : '#ccc';
 
-    // 시간 라벨 (날짜 첫 슬롯은 생략 — 날짜라벨로 대체)
-    if (!isNewDay) {
-      labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+12).toFixed(1)}" text-anchor="middle" font-size="7" fill="#bbb">${parseInt(h)}시</text>`;
-    }
-    labels += `<text x="${x.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="middle" font-size="8" fill="#2E7D32">${(parseFloat(s.TMP)||0).toFixed(0)}°</text>`;
-    if (pop > 0) {
-      labels += `<text x="${x.toFixed(1)}" y="${(padT+gH+21).toFixed(1)}" text-anchor="middle" font-size="7" fill="${popColor}">${pop}%</text>`;
-    }
+    // 아이콘
+    icons += `<text x="${x.toFixed(1)}" y="${iconY}" text-anchor="middle" font-size="12">${icon}</text>`;
+    // 기온
+    tempLabels += `<text x="${x.toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="8" fill="#2E7D32">${(parseFloat(s.TMP)||0).toFixed(0)}°</text>`;
+    // 포인트
     points += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#2E7D32"/>`;
-    icons += `<text x="${x.toFixed(1)}" y="${(padT-2).toFixed(1)}" text-anchor="middle" font-size="11">${icon}</text>`;
+    // 강수확률 (30% 이상만)
+    if (pop >= 30) {
+      const popColor = pop >= 60 ? '#1565C0' : '#378ADD';
+      popLabels += `<text x="${x.toFixed(1)}" y="${popY}" text-anchor="middle" font-size="8" fill="${popColor}">${pop}%</text>`;
+    }
+    // 시간 (6시, 12시, 18시만 — 0시 생략)
+    if (h !== 0) {
+      timeLabels += `<text x="${x.toFixed(1)}" y="${timeY}" text-anchor="middle" font-size="8" fill="#aaa">${h}시</text>`;
+    }
   });
 
   el.innerHTML = `
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
       <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;">
         <defs>
-          <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#4CAF50" stop-opacity="0.3"/>
+          <linearGradient id="tempGrad2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4CAF50" stop-opacity="0.25"/>
             <stop offset="100%" stop-color="#4CAF50" stop-opacity="0.02"/>
           </linearGradient>
         </defs>
-        ${dateDividers}
-        <path d="${fillPath}" fill="url(#tempGrad)"/>
+        ${dateBands}
+        ${dividers}
+        <path d="${fillPath}" fill="url(#tempGrad2)"/>
         <path d="${linePath}" fill="none" stroke="#2E7D32" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
         ${icons}
         ${points}
-        ${labels}
-        ${dateLabels}
+        ${tempLabels}
+        ${popLabels}
+        ${timeLabels}
+        ${dateTexts}
       </svg>
     </div>
   `;
 }
+
 
 function renderCalendar(year, month) {
   const firstDay = new Date(year, month-1, 1).getDay();
