@@ -565,13 +565,22 @@ async function loadAgriWeather() {
       return;
     }
 
-    // 최신 시간 데이터
-    var latest = items.filter(function(i) { return i.tmprt; }).pop() || items[items.length-1];
-    var totalRain = items.reduce(function(s, i) { return s + (parseFloat(i.rn) || 0); }, 0);
+    // 06, 12, 18, 00시 4개 시간대만 필터
+    var TARGET_HOURS = ['06:00', '12:00', '18:00', '00:00'];
+    var slotItems = TARGET_HOURS.map(function(h) {
+      return items.find(function(i) { return i.dateTime && i.dateTime.slice(11,16) === h; }) || null;
+    }).filter(Boolean);
 
-    // 토양수분·강수 카드 업데이트
+    // 가용 전체 데이터에서 요약값 계산
+    var totalRain = items.reduce(function(s, i) { return s + (parseFloat(i.rn) || 0); }, 0);
+    var temps = items.map(function(i) { return parseFloat(i.tmprt); }).filter(function(v) { return !isNaN(v); });
+    var maxT = temps.length ? Math.max.apply(null, temps) : null;
+    var minT = temps.length ? Math.min.apply(null, temps) : null;
+    var latest = items.filter(function(i) { return i.tmprt; }).pop() || items[items.length-1];
+
+    // 가용자원 카드 업데이트
     var soilEl = document.getElementById('agri-soil');
-    if (soilEl && latest.soilMitr) {
+    if (soilEl && latest && latest.soilMitr) {
       soilEl.innerHTML =
         '<div style="font-size:10px;color:#999;margin-bottom:4px;">토양수분</div>' +
         '<div style="font-size:14px;font-weight:500;">' + parseFloat(latest.soilMitr).toFixed(1) + '%</div>' +
@@ -586,29 +595,53 @@ async function loadAgriWeather() {
         (totalRain > 0 ? '비 있음' : '강수 없음') + '</div>';
     }
 
-    // 시간별 테이블
-    var validItems = items.filter(function(i) { return i.tmprt || i.hd; });
-    contentEl.innerHTML =
-      '<div style="overflow-x:auto;">' +
+    // 헤더: 오늘 최고/최저 요약
+    var summaryHtml = '';
+    if (maxT !== null && minT !== null) {
+      summaryHtml =
+        '<div style="display:flex;gap:12px;padding:8px 0 10px;border-bottom:0.5px solid #eee;margin-bottom:8px;">' +
+        '<span style="font-size:11px;color:#666;">최고 <b style="color:#E24B4A;">' + maxT.toFixed(1) + '°</b></span>' +
+        '<span style="font-size:11px;color:#666;">최저 <b style="color:#378ADD;">' + minT.toFixed(1) + '°</b></span>' +
+        '<span style="font-size:11px;color:#666;">강수 <b>' + totalRain.toFixed(1) + 'mm</b></span>' +
+        '</div>';
+    }
+
+    // 6시간 단위 테이블
+    var def = function(v, unit, dec) {
+      if (!v || v === '') return '—';
+      var n = parseFloat(v);
+      return isNaN(n) ? '—' : n.toFixed(dec !== undefined ? dec : 1) + (unit || '');
+    };
+
+    var tableHtml =
       '<table style="width:100%;font-size:10px;border-collapse:collapse;">' +
       '<thead><tr style="border-bottom:0.5px solid #eee;">' +
-      '<th style="padding:4px;color:#999;font-weight:400;text-align:left;">시간</th>' +
-      '<th style="padding:4px;color:#999;font-weight:400;">기온</th>' +
-      '<th style="padding:4px;color:#999;font-weight:400;">습도</th>' +
-      '<th style="padding:4px;color:#999;font-weight:400;">강수</th>' +
-      '<th style="padding:4px;color:#999;font-weight:400;">풍속</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:left;">시간</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:center;">기온</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:center;">강수</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:center;">일사량</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:center;">토양수분</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:center;">토양온도</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:center;">지표온도</th>' +
+      '<th style="padding:3px 2px;color:#999;font-weight:400;text-align:center;">이슬(분)</th>' +
       '</tr></thead><tbody>' +
-      validItems.map(function(item) {
+      slotItems.map(function(item) {
         var h = item.dateTime ? item.dateTime.slice(11,16) : '';
         return '<tr style="border-bottom:0.5px solid #f5f5f5;">' +
-          '<td style="padding:4px;color:#666;">' + h + '</td>' +
-          '<td style="padding:4px;text-align:center;">' + (item.tmprt ? parseFloat(item.tmprt).toFixed(1) + '°' : '—') + '</td>' +
-          '<td style="padding:4px;text-align:center;">' + (item.hd ? parseFloat(item.hd).toFixed(0) + '%' : '—') + '</td>' +
-          '<td style="padding:4px;text-align:center;color:#378ADD;">' + (item.rn && parseFloat(item.rn) > 0 ? parseFloat(item.rn).toFixed(1) : '—') + '</td>' +
-          '<td style="padding:4px;text-align:center;">' + (item.arvlty ? parseFloat(item.arvlty).toFixed(1) : '—') + '</td>' +
+          '<td style="padding:4px 2px;color:#2E7D32;font-weight:500;">' + h + '</td>' +
+          '<td style="padding:4px 2px;text-align:center;">' + def(item.tmprt, '°') + '</td>' +
+          '<td style="padding:4px 2px;text-align:center;color:#378ADD;">' + def(item.rn, 'mm') + '</td>' +
+          '<td style="padding:4px 2px;text-align:center;">' + def(item.srqty, '') + '</td>' +
+          '<td style="padding:4px 2px;text-align:center;">' + def(item.soilMitr, '%') + '</td>' +
+          '<td style="padding:4px 2px;text-align:center;">' + def(item.soilTp, '°') + '</td>' +
+          '<td style="padding:4px 2px;text-align:center;">' + def(item.frfr_Tp, '°') + '</td>' +
+          '<td style="padding:4px 2px;text-align:center;">' + def(item.dwcnTime, '', 0) + '</td>' +
           '</tr>';
       }).join('') +
-      '</tbody></table></div>' +
+      '</tbody></table>';
+
+    contentEl.innerHTML =
+      summaryHtml + tableHtml +
       '<div style="font-size:9px;color:#ccc;margin-top:6px;text-align:right;">출처: 농촌진흥청 군산 개정면 관측소</div>';
 
   } catch(e) {
