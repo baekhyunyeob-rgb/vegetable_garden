@@ -683,7 +683,7 @@ async function loadWeather() {
   const baseTime = pad(baseHour) + '00';
 
   try {
-    const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${KEY}&numOfRows=500&pageNo=1&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${nx}&ny=${ny}`;
+    const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${KEY}&numOfRows=1000&pageNo=1&dataType=JSON&base_date=${baseDate}&base_time=${baseTime}&nx=${nx}&ny=${ny}`;
     const res = await fetch(url);
     const data = await res.json();
     const items = data.response.body.items.item;
@@ -744,7 +744,7 @@ function renderWeatherGraph(el, slots) {
 
   // 포인트 간격 줄여서 폭 축소 (xStep 22→18)
   const padL = 24, padR = 8, padT = 14, padB = 32;
-  const xStep = 22;
+  const xStep = 26;
   const n = slots.length;
   const W = padL + xStep * (n - 1) + padR;
   const H = 110;
