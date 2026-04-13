@@ -429,7 +429,7 @@ function renderToday() {
     <div class="card">
       <div class="card-title">
         <span class="ct">날씨</span>
-        <span class="ct-more" onclick="alert('농업기상 상세 준비중')">농업기상 상세 ›</span>
+        <span class="ct-more" onclick="toggleAgriWeather()">농업기상 상세 ›</span>
       </div>
       <div id="weather-today" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:10px;border-bottom:0.5px solid #eee;">
         <div style="font-size:13px;color:#999;">날씨 정보 로딩 중...</div>
@@ -437,28 +437,38 @@ function renderToday() {
       <div id="weather-week" style="display:flex;gap:4px;overflow-x:auto;"></div>
     </div>
 
+    <div class="card" id="agri-weather-card" style="display:none;">
+      <div class="card-title">
+        <span class="ct">농업기상 상세</span>
+        <span style="font-size:10px;color:#999;">군산 개정면 (서천 인근)</span>
+      </div>
+      <div id="agri-weather-content">
+        <div style="font-size:12px;color:#999;text-align:center;padding:10px;">로딩 중...</div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title"><span class="ct">가용자원</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div onclick="alert('토질 상세 준비중')" style="background:#f8f8f8;border-radius:8px;padding:10px;cursor:pointer;">
           <div style="font-size:10px;color:#999;margin-bottom:4px;">토질</div>
-          <div style="font-size:14px;font-weight:500;">pH 5.8</div>
-          <div style="font-size:10px;color:#2E7D32;margin-top:2px;">벼·채소 적합</div>
+          <div style="font-size:14px;font-weight:500;">—</div>
+          <div style="font-size:10px;color:#999;margin-top:2px;">준비중</div>
         </div>
         <div onclick="alert('지하수 상세 준비중')" style="background:#f8f8f8;border-radius:8px;padding:10px;cursor:pointer;">
           <div style="font-size:10px;color:#999;margin-bottom:4px;">지하수</div>
-          <div style="font-size:14px;font-weight:500;">-3.2m</div>
-          <div style="font-size:10px;color:#185FA5;margin-top:2px;">평년 수준</div>
-        </div>
-        <div onclick="alert('병해충 상세 준비중')" style="background:#f8f8f8;border-radius:8px;padding:10px;cursor:pointer;">
-          <div style="font-size:10px;color:#999;margin-bottom:4px;">병해충</div>
-          <div style="font-size:14px;font-weight:500;">주의 1건</div>
-          <div style="font-size:10px;color:#B45309;margin-top:2px;">도열병 주의보</div>
-        </div>
-        <div onclick="alert('추후 결정')" style="background:#f8f8f8;border-radius:8px;padding:10px;cursor:pointer;">
-          <div style="font-size:10px;color:#999;margin-bottom:4px;">강수·관개</div>
           <div style="font-size:14px;font-weight:500;">—</div>
           <div style="font-size:10px;color:#999;margin-top:2px;">준비중</div>
+        </div>
+        <div id="agri-soil" style="background:#f8f8f8;border-radius:8px;padding:10px;">
+          <div style="font-size:10px;color:#999;margin-bottom:4px;">토양수분</div>
+          <div style="font-size:14px;font-weight:500;">—</div>
+          <div style="font-size:10px;color:#999;margin-top:2px;">로딩 중</div>
+        </div>
+        <div id="agri-rain" style="background:#f8f8f8;border-radius:8px;padding:10px;">
+          <div style="font-size:10px;color:#999;margin-bottom:4px;">일 강수량</div>
+          <div style="font-size:14px;font-weight:500;">—</div>
+          <div style="font-size:10px;color:#999;margin-top:2px;">로딩 중</div>
         </div>
       </div>
     </div>
@@ -526,6 +536,85 @@ function renderWork() {
   loadWeather();
   // 재배력 배지 로드
   renderFarmScheduleBadges(STATE.calendar.year, STATE.calendar.month);
+}
+
+// ── 농업기상 상세 (군산 개정면 관측소) ──────────────────
+let agriWeatherVisible = false;
+
+function toggleAgriWeather() {
+  var card = document.getElementById('agri-weather-card');
+  if (!card) return;
+  agriWeatherVisible = !agriWeatherVisible;
+  card.style.display = agriWeatherVisible ? 'block' : 'none';
+  if (agriWeatherVisible) loadAgriWeather();
+}
+
+async function loadAgriWeather() {
+  var contentEl = document.getElementById('agri-weather-content');
+  if (!contentEl) return;
+
+  var today = todayStr();
+  try {
+    var res = await fetch('/api/agriweather?date=' + today);
+    if (!res.ok) throw new Error('agriweather 오류');
+    var data = await res.json();
+    var items = data.items || [];
+
+    if (!items.length) {
+      contentEl.innerHTML = '<div style="font-size:11px;color:#ccc;text-align:center;padding:10px;">오늘 데이터 없음</div>';
+      return;
+    }
+
+    // 최신 시간 데이터
+    var latest = items.filter(function(i) { return i.tmprt; }).pop() || items[items.length-1];
+    var totalRain = items.reduce(function(s, i) { return s + (parseFloat(i.rn) || 0); }, 0);
+
+    // 토양수분·강수 카드 업데이트
+    var soilEl = document.getElementById('agri-soil');
+    if (soilEl && latest.soilMitr) {
+      soilEl.innerHTML =
+        '<div style="font-size:10px;color:#999;margin-bottom:4px;">토양수분</div>' +
+        '<div style="font-size:14px;font-weight:500;">' + parseFloat(latest.soilMitr).toFixed(1) + '%</div>' +
+        '<div style="font-size:10px;color:#2E7D32;margin-top:2px;">10cm 깊이</div>';
+    }
+    var rainEl = document.getElementById('agri-rain');
+    if (rainEl) {
+      rainEl.innerHTML =
+        '<div style="font-size:10px;color:#999;margin-bottom:4px;">일 강수량</div>' +
+        '<div style="font-size:14px;font-weight:500;">' + totalRain.toFixed(1) + 'mm</div>' +
+        '<div style="font-size:10px;color:' + (totalRain > 0 ? '#378ADD' : '#999') + ';margin-top:2px;">' +
+        (totalRain > 0 ? '비 있음' : '강수 없음') + '</div>';
+    }
+
+    // 시간별 테이블
+    var validItems = items.filter(function(i) { return i.tmprt || i.hd; });
+    contentEl.innerHTML =
+      '<div style="overflow-x:auto;">' +
+      '<table style="width:100%;font-size:10px;border-collapse:collapse;">' +
+      '<thead><tr style="border-bottom:0.5px solid #eee;">' +
+      '<th style="padding:4px;color:#999;font-weight:400;text-align:left;">시간</th>' +
+      '<th style="padding:4px;color:#999;font-weight:400;">기온</th>' +
+      '<th style="padding:4px;color:#999;font-weight:400;">습도</th>' +
+      '<th style="padding:4px;color:#999;font-weight:400;">강수</th>' +
+      '<th style="padding:4px;color:#999;font-weight:400;">풍속</th>' +
+      '</tr></thead><tbody>' +
+      validItems.map(function(item) {
+        var h = item.dateTime ? item.dateTime.slice(11,16) : '';
+        return '<tr style="border-bottom:0.5px solid #f5f5f5;">' +
+          '<td style="padding:4px;color:#666;">' + h + '</td>' +
+          '<td style="padding:4px;text-align:center;">' + (item.tmprt ? parseFloat(item.tmprt).toFixed(1) + '°' : '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;">' + (item.hd ? parseFloat(item.hd).toFixed(0) + '%' : '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;color:#378ADD;">' + (item.rn && parseFloat(item.rn) > 0 ? parseFloat(item.rn).toFixed(1) : '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;">' + (item.arvlty ? parseFloat(item.arvlty).toFixed(1) : '—') + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table></div>' +
+      '<div style="font-size:9px;color:#ccc;margin-top:6px;text-align:right;">출처: 농촌진흥청 군산 개정면 관측소</div>';
+
+  } catch(e) {
+    if (contentEl) contentEl.innerHTML = '<div style="font-size:11px;color:#ccc;text-align:center;padding:10px;">데이터를 불러올 수 없어요</div>';
+    console.warn('농업기상 오류:', e);
+  }
 }
 
 function getWeatherIcon(sky, pty) {
