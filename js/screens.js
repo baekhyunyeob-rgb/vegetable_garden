@@ -431,7 +431,7 @@ function renderToday() {
         <span class="ct">날씨</span>
         <span class="ct-more" onclick="toggleAgriWeather()">농업기상 상세 ›</span>
       </div>
-      <div id="weather-today" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:10px;border-bottom:0.5px solid #eee;">
+      <div id="weather-today" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;margin-bottom:6px;border-bottom:0.5px solid #eee;">
         <div style="font-size:13px;color:#999;">날씨 정보 로딩 중...</div>
       </div>
       <div id="weather-week" style="display:flex;gap:4px;overflow-x:auto;"></div>
@@ -753,10 +753,10 @@ function renderWeatherGraph(el, slots) {
   const iconY   = 14;   // 아이콘 중심
   const graphT  = 24;   // 그래프 상단
   const graphB  = 80;   // 그래프 하단
-  const popY    = 92;   // 강수확률 텍스트
-  const timeY   = 104;  // 시간 텍스트
+  const popY    = 90;   // 강수확률 텍스트
+  const timeY   = 101;  // 시간 텍스트
   const dateH   = 16;   // 날짜 띠 높이
-  const H       = timeY + dateH + 2;
+  const H       = timeY + dateH + 4;
 
   const gH = graphB - graphT;
   const xPos = (i) => padL + i * xStep;
