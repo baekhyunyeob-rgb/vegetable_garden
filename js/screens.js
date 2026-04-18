@@ -274,9 +274,13 @@ async function fetchParcelInfo(address) {
   if (!infoEl) return;
   infoEl.textContent = '토지 정보 조회 중...';
 
+  var VWORLD_KEY = 'DFFEFE4F-4658-3690-98E8-5CE7D97D26C1';
+  var DOMAIN = 'https://kitchen-garden.vercel.app';
+
   try {
-    // 1단계: 주소 → 좌표+PNU
-    var res1 = await fetch('/api/vworld?action=geocode&address=' + encodeURIComponent(address));
+    // 1단계: 주소 → 좌표+PNU (브라우저 직접 호출)
+    var geocodeUrl = 'https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=' + encodeURIComponent(address) + '&refine=true&simple=false&format=json&type=parcel&key=' + VWORLD_KEY + '&domain=' + encodeURIComponent(DOMAIN);
+    var res1 = await fetch(geocodeUrl);
     if (!res1.ok) throw new Error('geocode 실패');
     var geo = await res1.json();
 
