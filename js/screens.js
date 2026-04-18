@@ -283,7 +283,7 @@ async function fetchParcelInfo(address) {
     var result = geo?.response?.result;
     if (!result || !result.point) { infoEl.textContent = '주소를 찾을 수 없어요'; return; }
 
-    var pnu = result.refined?.extendedMap?.고유번호;
+    var pnu = geo?.response?.refined?.structure?.level4LC;
     if (!pnu) { infoEl.textContent = '필지 정보를 찾을 수 없어요'; return; }
 
     infoEl.textContent = '필지 정보 불러오는 중...';
