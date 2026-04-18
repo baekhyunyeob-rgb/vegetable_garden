@@ -274,13 +274,9 @@ async function fetchParcelInfo(address) {
   if (!infoEl) return;
   infoEl.textContent = '토지 정보 조회 중...';
 
-  var VWORLD_KEY = 'DFFEFE4F-4658-3690-98E8-5CE7D97D26C1';
-  var DOMAIN = 'https://kitchen-garden.vercel.app';
-
   try {
-    // 1단계: 주소 → 좌표+PNU (브라우저 직접 호출)
-    var geocodeUrl = 'https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=' + encodeURIComponent(address) + '&refine=true&simple=false&format=json&type=parcel&key=' + VWORLD_KEY + '&domain=' + encodeURIComponent(DOMAIN);
-    var res1 = await fetch(geocodeUrl);
+    // 1단계: 주소 → 좌표+PNU
+    var res1 = await fetch('/api/vworld?action=geocode&address=' + encodeURIComponent(address));
     if (!res1.ok) throw new Error('geocode 실패');
     var geo = await res1.json();
 
@@ -292,11 +288,8 @@ async function fetchParcelInfo(address) {
 
     infoEl.textContent = '필지 정보 불러오는 중...';
 
-    // 2단계: PNU → 토지임야정보 (면적·지목) — 브라우저에서 직접 호출
-    var VWORLD_KEY = 'DFFEFE4F-4658-3690-98E8-5CE7D97D26C1';
-    var DOMAIN = 'https://kitchen-garden.vercel.app';
-    var landUrl = 'https://api.vworld.kr/ned/data/ladfrlList?key=' + VWORLD_KEY + '&pnu=' + encodeURIComponent(pnu) + '&format=json&domain=' + encodeURIComponent(DOMAIN);
-    var res2 = await fetch(landUrl);
+    // 2단계: PNU → 토지임야정보 (면적·지목)
+    var res2 = await fetch('/api/vworld?action=landinfo&pnu=' + encodeURIComponent(pnu));
     if (!res2.ok) throw new Error('landinfo 실패');
     var land = await res2.json();
 
