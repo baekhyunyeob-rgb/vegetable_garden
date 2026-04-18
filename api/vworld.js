@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   const { action, address, pnu } = req.query;
   const KEY = process.env.VWORLD_API_KEY;
+  const DOMAIN = 'https://kitchen-garden.vercel.app';
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json;charset=utf-8');
@@ -13,11 +14,11 @@ export default async function handler(req, res) {
     let url = '';
 
     if (action === 'geocode') {
-      url = `https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=parcel&key=${KEY}`;
+      url = `https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=parcel&key=${KEY}&domain=${encodeURIComponent(DOMAIN)}`;
     } else if (action === 'parcel') {
-      url = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${KEY}&attrFilter=pnu:=:${pnu}&format=json`;
+      url = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN&key=${KEY}&attrFilter=pnu:=:${pnu}&format=json&domain=${encodeURIComponent(DOMAIN)}`;
     } else if (action === 'landinfo') {
-      url = `https://api.vworld.kr/ned/data/getLandCharacteristics?key=${KEY}&pnu=${pnu}&format=json&numOfRows=1&pageNo=1`;
+      url = `https://api.vworld.kr/ned/data/ladfrlList?key=${KEY}&pnu=${pnu}&format=json&domain=${encodeURIComponent(DOMAIN)}`;
     } else {
       return res.status(400).json({ error: 'invalid action' });
     }
