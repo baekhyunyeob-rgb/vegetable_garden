@@ -544,8 +544,8 @@ function renderWork() {
 
     <div class="card" id="work-input-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:12px;font-weight:500;">오늘 작업</span>
-        <button onclick="addWorkLine()" class="btn-outline" style="width:auto;">+ 추가</button>
+        <span style="font-size:12px;font-weight:500;" id="work-input-title">작업 기록</span>
+        <button onclick="addWorkLine()" class="btn-outline" style="width:auto;">+ 직접추가</button>
       </div>
       <div id="work-lines">
         <div style="border:0.5px solid #eee;border-radius:8px;padding:10px;color:#ccc;font-size:11px;">
@@ -912,17 +912,17 @@ function renderCalendar(year, month) {
     const wIcon = isPast ? '☀️' : '🌤';
     cells += `
       <div onclick="selectDate('${dateStr}')" data-date="${dateStr}"
-        style="min-height:40px;padding:2px;border:0.5px dashed #eee;cursor:pointer;${isToday?'background:#F1F8E9;border-color:#2E7D32;':''}">
+        style="min-height:28px;padding:2px;border:0.5px dashed #eee;cursor:pointer;${isToday?'background:#F1F8E9;border-color:#2E7D32;'+'':''}">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           ${isToday
             ? `<div style="width:15px;height:15px;border-radius:50%;background:#2E7D32;color:white;font-size:8px;display:flex;align-items:center;justify-content:center;">${d}</div>`
             : `<span style="font-size:9px;color:${dow===0?'#E24B4A':dow===6?'#378ADD':'#111'};">${d}</span>`
           }
         </div>
-        <div class="schedule-badges"></div>
+        <div class="schedule-badges" style="display:flex;flex-direction:column;gap:1px;margin-top:1px;"></div>
         ${works.slice(0,1).map(w => `
           <div style="display:flex;align-items:center;gap:1px;margin-top:1px;overflow:hidden;">
-            <span style="font-size:6px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${w.workType}</span>
+            <span style="font-size:6px;color:#4CAF50;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">●</span>
           </div>
         `).join('')}
       </div>
@@ -950,40 +950,160 @@ pendingWorks = [];
 
 function selectDate(dateStr) {
   selectedWorkDate = dateStr;
+  // 이미 저장된 기록 로드
   pendingWorks = JSON.parse(JSON.stringify(STATE.calendar.works[dateStr] || []));
   renderWorkLines();
   renderEval(dateStr);
-  document.getElementById('eval-date').textContent = dateStr.slice(5).replace('-','.');
+  const evalDate = document.getElementById('eval-date');
+  if (evalDate) evalDate.textContent = dateStr.slice(5).replace('-','.');
+  // 날짜 선택시 입력 카드 제목 업데이트
+  const cardTitle = document.getElementById('work-input-title');
+  if (cardTitle) cardTitle.textContent = dateStr.slice(5).replace('-','.') + ' 작업';
 }
 
 function renderWorkLines() {
   const el = document.getElementById('work-lines');
   const saveBtn = document.getElementById('work-save-btn');
   if (!el) return;
-  if (!pendingWorks.length) {
+
+  if (!selectedWorkDate) {
     el.innerHTML = `<div style="border:0.5px solid #eee;border-radius:8px;padding:10px;color:#ccc;font-size:11px;">월력에서 날짜를 선택하세요</div>`;
     if (saveBtn) saveBtn.style.display = 'none';
     return;
   }
-  el.innerHTML = pendingWorks.map((w, i) => `
-    <div style="display:flex;align-items:center;gap:5px;border:0.5px solid #eee;border-radius:8px;padding:7px 9px;margin-bottom:4px;">
-      <span style="font-size:10px;color:#999;flex-shrink:0;">${i+1}.</span>
-      <span class="badge ${getCropBadgeClass(w.cropName)}" style="font-size:9px;flex-shrink:0;">${w.cropName}</span>
-      <span style="font-size:10px;color:#666;flex-shrink:0;">${w.workType}</span>
-      <input type="text" placeholder="세부 내용"
-        value="${w.detail||''}"
-        onchange="pendingWorks[${i}].detail=this.value"
-        style="flex:1;border:none;border-bottom:0.5px solid #eee;border-radius:0;padding:2px 4px;font-size:10px;" />
-    </div>
-  `).join('');
+
+  // 재배력 기반 예정 작업 찾기
+  const [y, m, d] = selectedWorkDate.split('-').map(Number);
+  const scheduledItems = getScheduledWorksForDate(m, d);
+
+  let html = '';
+
+  // 1. 재배력 예정 작업 섹션
+  if (scheduledItems.length) {
+    html += `<div style="font-size:10px;color:#999;margin-bottom:4px;font-weight:500;">📋 오늘 예정 작업 (재배력 기준)</div>`;
+    html += scheduledItems.map((item, i) => {
+      const checked = pendingWorks.some(w => w.fromSchedule && w.scheduleKey === item.key);
+      const src = SOURCE_STYLE[item.source] || SOURCE_STYLE.nongsaro;
+      const overdue = isOverdueSchedule(item, m, d);
+      return `
+        <div style="display:flex;align-items:center;gap:6px;border:0.5px solid ${checked?'#A5D6A7':'#eee'};border-radius:8px;padding:6px 9px;margin-bottom:3px;background:${checked?'#F1F8E9':'#fff'};">
+          <input type="checkbox" id="sched_${i}" ${checked?'checked':''} onchange="toggleScheduleWork(${i})"
+            style="accent-color:#2E7D32;cursor:pointer;" />
+          <span style="font-size:8px;padding:1px 4px;border-radius:3px;background:${src.bg};color:${src.color};border:0.5px solid ${src.border};flex-shrink:0;">${src.icon}</span>
+          <span style="flex:1;font-size:10px;color:#333;">${item.cropName} · ${item.opertNm}</span>
+          ${overdue ? '<span style="font-size:9px;color:#E53935;">⚠️기한지남</span>' : `<span style="font-size:9px;color:#999;">~${item.endMon}월${item.endEra}</span>`}
+        </div>`;
+    }).join('');
+  }
+
+  // 2. 직접 추가 작업 섹션
+  const manualWorks = pendingWorks.filter(w => !w.fromSchedule);
+  if (manualWorks.length) {
+    html += `<div style="font-size:10px;color:#999;margin:6px 0 4px;font-weight:500;">✏️ 직접 추가</div>`;
+    html += pendingWorks.map((w, i) => {
+      if (w.fromSchedule) return '';
+      return `
+        <div style="display:flex;align-items:center;gap:5px;border:0.5px solid #eee;border-radius:8px;padding:7px 9px;margin-bottom:3px;">
+          <span class="badge ${getCropBadgeClass(w.cropName)}" style="font-size:9px;flex-shrink:0;">${w.cropName}</span>
+          <span style="font-size:10px;color:#666;flex-shrink:0;">${w.workType}</span>
+          <input type="text" placeholder="세부 내용"
+            value="${w.detail||''}"
+            onchange="pendingWorks[${i}].detail=this.value"
+            style="flex:1;border:none;border-bottom:0.5px solid #eee;border-radius:0;padding:2px 4px;font-size:10px;" />
+          <button onclick="removeWork(${i})" style="color:#E24B4A;background:none;border:none;font-size:13px;cursor:pointer;padding:0;">×</button>
+        </div>`;
+    }).join('');
+  }
+
+  if (!scheduledItems.length && !manualWorks.length) {
+    html = `<div style="font-size:11px;color:#ccc;text-align:center;padding:8px 0;">작업 없음</div>`;
+  }
+
+  el.innerHTML = html;
+
+  // scheduleItems를 전역에 캐싱 (toggleScheduleWork에서 참조)
+  window._currentScheduledItems = scheduledItems;
+
   if (saveBtn) saveBtn.style.display = 'block';
+}
+
+// 체크박스 토글 — 재배력 예정 작업 완료/취소
+function toggleScheduleWork(idx) {
+  const item = (window._currentScheduledItems || [])[idx];
+  if (!item) return;
+  const existing = pendingWorks.findIndex(w => w.fromSchedule && w.scheduleKey === item.key);
+  if (existing >= 0) {
+    pendingWorks.splice(existing, 1);
+  } else {
+    pendingWorks.push({
+      cropName: item.cropName,
+      workType: item.opertNm,
+      detail: '',
+      weather: '☀️',
+      date: selectedWorkDate,
+      fromSchedule: true,
+      scheduleKey: item.key,
+      source: item.source,
+    });
+  }
+  renderWorkLines();
+}
+
+// 직접 추가 작업 제거
+function removeWork(idx) {
+  pendingWorks.splice(idx, 1);
+  renderWorkLines();
+}
+
+// 특정 날짜에 해당하는 재배력 예정 작업 목록 반환
+function getScheduledWorksForDate(month, day) {
+  const result = [];
+  const seen = {};
+
+  STATE.farm.crops.forEach(function(crop) {
+    // 농사로 API 재배력
+    if (crop.cntntsNo && FARM_SCHEDULE_CACHE[crop.cntntsNo]) {
+      FARM_SCHEDULE_CACHE[crop.cntntsNo].forEach(function(s) {
+        if (isInSchedule(month, day, s.beginMon, s.beginEra, s.endMon, s.endEra)) {
+          const key = crop.name + '_' + s.opertNm + '_nongsaro';
+          if (!seen[key]) {
+            seen[key] = true;
+            result.push({ cropName: crop.name, opertNm: s.opertNm, beginMon: s.beginMon, beginEra: s.beginEra, endMon: s.endMon, endEra: s.endEra, source: 'nongsaro', key });
+          }
+        }
+      });
+    }
+    // AI 재배력
+    if (AI_SCHEDULE_CACHE[crop.name]) {
+      AI_SCHEDULE_CACHE[crop.name].forEach(function(s) {
+        if (isInSchedule(month, day, s.beginMon, s.beginEra, s.endMon, s.endEra)) {
+          const key = crop.name + '_' + s.opertNm + '_ai';
+          if (!seen[key]) {
+            seen[key] = true;
+            result.push({ cropName: crop.name, opertNm: s.opertNm, beginMon: s.beginMon, beginEra: s.beginEra, endMon: s.endMon, endEra: s.endEra, source: 'ai', key });
+          }
+        }
+      });
+    }
+  });
+  return result;
+}
+
+// 기한이 지난 예정 작업인지 확인
+function isOverdueSchedule(item, curMonth, curDay) {
+  const endDay = eraToDay(item.endEra);
+  const cur = curMonth * 100 + curDay;
+  const end = item.endMon * 100 + endDay;
+  return cur > end;
 }
 
 function addWorkLine() {
   if (!STATE.farm.crops.length) { alert('먼저 내 텃밭에서 작물을 등록하세요'); return; }
-  pendingWorks.push({ cropName: STATE.farm.crops[0].name, workType: '기타', detail: '', weather: '☀️', date: selectedWorkDate });
+  if (!selectedWorkDate) { alert('월력에서 날짜를 먼저 선택하세요'); return; }
+  pendingWorks.push({ cropName: STATE.farm.crops[0].name, workType: '기타', detail: '', weather: '☀️', date: selectedWorkDate, fromSchedule: false, source: 'user' });
   renderWorkLines();
-  document.getElementById('work-save-btn').style.display = 'block';
+  const saveBtn = document.getElementById('work-save-btn');
+  if (saveBtn) saveBtn.style.display = 'block';
 }
 
 function saveWork() {
@@ -997,25 +1117,110 @@ function saveWork() {
 function renderEval(dateStr) {
   const el = document.getElementById('eval-content');
   if (!el) return;
-  const works = STATE.calendar.works[dateStr] || [];
-  if (!works.length) {
-    el.innerHTML = `<div style="font-size:11px;color:#ccc;text-align:center;padding:10px 0;">작업 내용 없음</div>`;
-    return;
+
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const today = new Date();
+  const todayNum = today.getFullYear() * 10000 + (today.getMonth()+1) * 100 + today.getDate();
+  const selNum = y * 10000 + m * 100 + d;
+
+  // 이달 전체 작업 분석
+  const monthWorks = {};
+  Object.entries(STATE.calendar.works).forEach(([dt, ws]) => {
+    if (dt.startsWith(y + '-' + String(m).padStart(2,'0'))) {
+      ws.forEach(w => { if (!monthWorks[dt]) monthWorks[dt] = []; monthWorks[dt].push(w); });
+    }
+  });
+  const totalDone = Object.values(monthWorks).flat().length;
+
+  // 이달 예정 작업 수집 (전체 날짜 순회)
+  const lastDate = new Date(y, m, 0).getDate();
+  let scheduledTotal = 0, scheduledDone = 0;
+  const missedItems = [];
+  const upcomingItems = [];
+
+  for (let dd = 1; dd <= lastDate; dd++) {
+    const dt = y + '-' + String(m).padStart(2,'0') + '-' + String(dd).padStart(2,'0');
+    const dtNum = y * 10000 + m * 100 + dd;
+    const daySchedules = getScheduledWorksForDate(m, dd).filter(s => eraToDay(s.beginEra) === dd);
+
+    daySchedules.forEach(s => {
+      scheduledTotal++;
+      const recorded = (STATE.calendar.works[dt] || []).some(w => w.fromSchedule && w.scheduleKey === s.key);
+      if (recorded) {
+        scheduledDone++;
+      } else if (dtNum < todayNum) {
+        missedItems.push({ ...s, dt });
+      } else if (dtNum > selNum && dtNum <= selNum + 700) { // 7일 이내
+        upcomingItems.push({ ...s, dt });
+      }
+    });
   }
-  el.innerHTML = works.map((w, i) => `
-    <div style="display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:0.5px solid #eee;">
-      ${i===0 ? `
-        <span class="badge ${getCropBadgeClass(w.cropName)}" style="flex-shrink:0;">${w.cropName}</span>
-        <div style="flex:1;">
-          <div style="font-size:11px;color:#111;">${w.workType}</div>
-          <div style="font-size:9px;color:#999;margin-top:1px;">${w.weather} · 재배력</div>
+
+  const pct = scheduledTotal ? Math.round(scheduledDone / scheduledTotal * 100) : null;
+  const dayWorks = STATE.calendar.works[dateStr] || [];
+
+  let html = '';
+
+  // 선택 날짜 기록
+  if (dayWorks.length) {
+    html += `<div style="font-size:10px;color:#2E7D32;font-weight:500;margin-bottom:4px;">${dateStr.slice(5).replace('-','.')} 기록</div>`;
+    html += dayWorks.map(w => {
+      const src = SOURCE_STYLE[w.source] || SOURCE_STYLE.user;
+      return `<div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:0.5px solid #f5f5f5;">
+        <span style="font-size:8px;padding:1px 4px;border-radius:3px;background:${src.bg};color:${src.color};">${src.icon}</span>
+        <span class="badge ${getCropBadgeClass(w.cropName)}" style="font-size:8px;">${w.cropName}</span>
+        <span style="font-size:10px;color:#333;flex:1;">${w.workType}${w.detail ? ' · ' + w.detail : ''}</span>
+      </div>`;
+    }).join('');
+    html += '<div style="margin-top:8px;"></div>';
+  }
+
+  // 이달 완료율
+  if (scheduledTotal > 0) {
+    html += `
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#666;margin-bottom:3px;">
+          <span>이달 예정 완료율</span>
+          <span style="color:#2E7D32;font-weight:500;">${scheduledDone}/${scheduledTotal} (${pct}%)</span>
         </div>
-      ` : `
-        <span style="font-size:10px;color:#999;flex-shrink:0;padding-top:1px;">${i+1}.</span>
-        <span style="font-size:11px;color:#111;flex:1;">${w.detail || w.workType}</span>
-      `}
-    </div>
-  `).join('');
+        <div style="height:4px;background:#eee;border-radius:2px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:#4CAF50;border-radius:2px;transition:width 0.3s;"></div>
+        </div>
+      </div>`;
+  }
+
+  // 미완료 경고
+  if (missedItems.length) {
+    html += `<div style="font-size:10px;color:#E53935;font-weight:500;margin-bottom:3px;">⚠️ 기한 지난 미완료 작업</div>`;
+    html += missedItems.slice(0,3).map(s => {
+      const src = SOURCE_STYLE[s.source] || SOURCE_STYLE.nongsaro;
+      return `<div style="font-size:10px;color:#B71C1C;padding:2px 0;display:flex;align-items:center;gap:4px;">
+        <span style="font-size:8px;background:${src.bg};color:${src.color};padding:1px 3px;border-radius:3px;">${src.icon}</span>
+        ${s.cropName} · ${s.opertNm} <span style="color:#ccc;">(${s.dt.slice(5)})</span>
+      </div>`;
+    }).join('');
+    if (missedItems.length > 3) html += `<div style="font-size:10px;color:#ccc;">외 ${missedItems.length-3}건</div>`;
+    html += '<div style="margin-top:6px;"></div>';
+  }
+
+  // 다가오는 작업
+  if (upcomingItems.length) {
+    html += `<div style="font-size:10px;color:#1565C0;font-weight:500;margin-bottom:3px;">📅 다가오는 작업 (7일내)</div>`;
+    html += upcomingItems.slice(0,3).map(s => {
+      const src = SOURCE_STYLE[s.source] || SOURCE_STYLE.nongsaro;
+      return `<div style="font-size:10px;color:#333;padding:2px 0;display:flex;align-items:center;gap:4px;">
+        <span style="font-size:8px;background:${src.bg};color:${src.color};padding:1px 3px;border-radius:3px;">${src.icon}</span>
+        ${s.cropName} · ${s.opertNm} <span style="color:#999;">(${s.dt.slice(5)})</span>
+      </div>`;
+    }).join('');
+    html += '<div style="margin-top:6px;"></div>';
+  }
+
+  if (!html) {
+    html = `<div style="font-size:11px;color:#ccc;text-align:center;padding:10px 0;">분석할 데이터 없음</div>`;
+  }
+
+  el.innerHTML = html;
 }
 
 // ════════════════════════════════════════════════════
@@ -1253,6 +1458,15 @@ async function runAI() {
 // 재배력 연동 (farmWorkingPlanNew)
 // ════════════════════════════════════════════════════
 const FARM_SCHEDULE_CACHE = {};
+const AI_SCHEDULE_CACHE = {}; // Gemini로 생성된 AI 재배력 캐시
+
+// 출처별 배지 스타일
+const SOURCE_STYLE = {
+  nongsaro: { icon: '🌾', label: '농사로', bg: '#E8F5E9', color: '#2E7D32', border: '#A5D6A7' },
+  ai:       { icon: '🤖', label: 'AI',    bg: '#EDE7F6', color: '#4527A0', border: '#CE93D8' },
+  user:     { icon: '✏️', label: '직접',  bg: '#F5F5F5', color: '#616161', border: '#BDBDBD' },
+};
+
 const CROP_COLORS = [
   {bg:'#C8E6C9', color:'#1B5E20'},
   {bg:'#BBDEFB', color:'#0D47A1'},
@@ -1347,58 +1561,98 @@ function isInSchedule(month, day, beginMon, beginEra, endMon, endEra) {
   }
 }
 
-// 캘린더에 재배력 배지 추가
+// 캘린더에 재배력 배지 추가 (출처별 구분)
 async function renderFarmScheduleBadges(year, month) {
-  // cntntsNo 있는 작물만
-  var crops = STATE.farm.crops.filter(function(c) { return c.cntntsNo; });
-  var unique = [];
-  var seen = {};
-  crops.forEach(function(c) {
-    if (!seen[c.cntntsNo]) { seen[c.cntntsNo] = true; unique.push(c); }
-  });
+  // 1. 농사로 API 재배력 로드
+  const nongsaroCrops = STATE.farm.crops.filter(c => c.cntntsNo);
+  const uniqueNongsaro = [];
+  const seenN = {};
+  nongsaroCrops.forEach(c => { if (!seenN[c.cntntsNo]) { seenN[c.cntntsNo] = true; uniqueNongsaro.push(c); } });
+  if (uniqueNongsaro.length) {
+    await Promise.all(uniqueNongsaro.map(c => loadFarmSchedule(c.cntntsNo)));
+  }
 
-  if (!unique.length) return;
+  // 2. AI 재배력 로드 (cntntsNo 없는 작물)
+  const aiCrops = STATE.farm.crops.filter(c => !c.cntntsNo);
+  const uniqueAI = [];
+  const seenA = {};
+  aiCrops.forEach(c => { if (!seenA[c.name] && !AI_SCHEDULE_CACHE[c.name]) { seenA[c.name] = true; uniqueAI.push(c); } });
+  if (uniqueAI.length) {
+    await Promise.all(uniqueAI.map(c => loadAISchedule(c.name)));
+  }
 
-  // 각 작물 일정 로드
-  var schedules = await Promise.all(unique.map(function(c) {
-    return loadFarmSchedule(c.cntntsNo);
-  }));
-
-  // 날짜별로 배지 삽입
-  var lastDate = new Date(year, month, 0).getDate();
+  // 3. 날짜별 배지 삽입
+  const lastDate = new Date(year, month, 0).getDate();
   for (var d = 1; d <= lastDate; d++) {
-    var dateStr = year + '-' + String(month).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    var cell = document.querySelector('[data-date="' + dateStr + '"]');
+    const dateStr = year + '-' + String(month).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const cell = document.querySelector('[data-date="' + dateStr + '"]');
     if (!cell) continue;
-
-    var badgeContainer = cell.querySelector('.schedule-badges');
+    const badgeContainer = cell.querySelector('.schedule-badges');
     if (!badgeContainer) continue;
     badgeContainer.innerHTML = '';
 
-    unique.forEach(function(crop, idx) {
-      var schedule = schedules[idx] || [];
-      var color = getCropColor(idx);
-      schedule.forEach(function(s) {
-        if (isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) {
-          // 시작일에만 표시
-          var startDay = eraToDay(s.beginEra);
-          var isStart = (s.beginMon === month && d === startDay);
-          if (!isStart) return;
+    // 작물 순서대로 배지 추가
+    STATE.farm.crops.forEach(function(crop, cropIdx) {
+      const color = getCropColor(cropIdx);
 
-          // 종료 시기 표시
-          var eraLabel = {'상':'초','중':'중','하':'말'};
-          var endLabel = s.endMon + '월' + (eraLabel[s.endEra] || s.endEra);
-          var sameDay = (s.beginMon === s.endMon && s.beginEra === s.endEra);
-          var label = sameDay ? s.opertNm : s.opertNm + '(~' + endLabel + ')';
-
-          var badge = document.createElement('div');
-          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;margin-top:0;line-height:1.3;white-space:nowrap;overflow:hidden;display:inline-block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;';
+      // 농사로 배지
+      if (crop.cntntsNo && FARM_SCHEDULE_CACHE[crop.cntntsNo]) {
+        FARM_SCHEDULE_CACHE[crop.cntntsNo].forEach(function(s) {
+          if (!isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) return;
+          const startDay = eraToDay(s.beginEra);
+          if (!(s.beginMon === month && d === startDay)) return;
+          const eraLabel = {'상':'초','중':'중','하':'말'};
+          const endLabel = s.endMon + '월' + (eraLabel[s.endEra] || s.endEra);
+          const sameDay = s.beginMon === s.endMon && s.beginEra === s.endEra;
+          const label = sameDay ? s.opertNm : s.opertNm + '(~' + endLabel + ')';
+          const badge = document.createElement('div');
+          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;border-left:2px solid #4CAF50;';
           badge.textContent = label;
-          badge.title = s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
+          badge.title = '🌾 농사로 | ' + crop.name + ' ' + s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
           badgeContainer.appendChild(badge);
-        }
-      });
+        });
+      }
+
+      // AI 배지
+      if (!crop.cntntsNo && AI_SCHEDULE_CACHE[crop.name]) {
+        AI_SCHEDULE_CACHE[crop.name].forEach(function(s) {
+          if (!isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) return;
+          const startDay = eraToDay(s.beginEra);
+          if (!(s.beginMon === month && d === startDay)) return;
+          const eraLabel = {'상':'초','중':'중','하':'말'};
+          const endLabel = s.endMon + '월' + (eraLabel[s.endEra] || s.endEra);
+          const sameDay = s.beginMon === s.endMon && s.beginEra === s.endEra;
+          const label = s.opertNm + (sameDay ? '' : '(~' + endLabel + ')');
+          const badge = document.createElement('div');
+          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;color:#4527A0;background:#EDE7F6;cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;border-left:2px solid #9C27B0;';
+          badge.textContent = label;
+          badge.title = '🤖 AI | ' + crop.name + ' ' + s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
+          badgeContainer.appendChild(badge);
+        });
+      }
     });
+  }
+}
+
+// AI 재배력 로드 (Gemini API)
+async function loadAISchedule(cropName) {
+  if (AI_SCHEDULE_CACHE[cropName]) return AI_SCHEDULE_CACHE[cropName];
+  try {
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cropName })
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const schedule = (data.schedule || []).map(s => ({
+      ...s,
+      opertNm: shortenOpert(s.opertNm),
+    }));
+    AI_SCHEDULE_CACHE[cropName] = schedule;
+    return schedule;
+  } catch(e) {
+    return [];
   }
 }
 
