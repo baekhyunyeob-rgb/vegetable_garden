@@ -930,7 +930,13 @@ function renderCalendar(year, month) {
   }
   cells += '</div>';
 
-  const legend = "";
+  const legend = `
+    <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;padding:2px 2px 0;">
+      <span style="font-size:8px;color:#555;display:flex;align-items:center;gap:2px;"><span style="font-weight:700;color:#2E7D32;">▶</span> 시작</span>
+      <span style="font-size:8px;color:#999;display:flex;align-items:center;gap:2px;"><span style="font-weight:700;">■</span> 마감</span>
+      <span style="font-size:8px;color:#555;">🌾 농사로</span>
+      <span style="font-size:8px;color:#555;">🤖 AI</span>
+    </div>`;
   return dayLabels + cells + legend;
 }
 
@@ -1100,10 +1106,44 @@ function isOverdueSchedule(item, curMonth, curDay) {
 function addWorkLine() {
   if (!STATE.farm.crops.length) { alert('먼저 내 텃밭에서 작물을 등록하세요'); return; }
   if (!selectedWorkDate) { alert('월력에서 날짜를 먼저 선택하세요'); return; }
-  pendingWorks.push({ cropName: STATE.farm.crops[0].name, workType: '기타', detail: '', weather: '☀️', date: selectedWorkDate, fromSchedule: false, source: 'user' });
-  renderWorkLines();
+
+  // 작물 목록 (중복 제거)
+  const uniqueNames = [...new Set(STATE.farm.crops.map(c => c.name))];
+
+  // 선택 팝업 대신 인라인 선택 UI 추가
+  const el = document.getElementById('work-lines');
+  const selector = document.createElement('div');
+  selector.id = 'crop-selector-row';
+  selector.style.cssText = 'display:flex;align-items:center;gap:6px;border:0.5px solid #2E7D32;border-radius:8px;padding:7px 9px;margin-bottom:3px;background:#F1F8E9;';
+  selector.innerHTML = `
+    <select id="new-crop-select" style="flex:1;border:none;background:transparent;font-size:11px;color:#333;outline:none;">
+      ${uniqueNames.map(n => `<option value="${n}">${n}</option>`).join('')}
+    </select>
+    <select id="new-work-type" style="border:none;background:transparent;font-size:11px;color:#666;outline:none;">
+      <option>기타</option><option>파종</option><option>정식</option><option>수확</option>
+      <option>시비</option><option>제초</option><option>방제</option><option>관수</option><option>전정</option>
+    </select>
+    <input type="text" id="new-work-detail" placeholder="메모" style="flex:1;border:none;border-bottom:0.5px solid #ccc;font-size:10px;padding:1px 3px;background:transparent;" />
+    <button onclick="confirmAddWork()" style="font-size:11px;color:white;background:#2E7D32;border:none;border-radius:5px;padding:3px 8px;cursor:pointer;">✓</button>
+    <button onclick="cancelAddWork()" style="font-size:11px;color:#999;background:none;border:none;cursor:pointer;">✕</button>
+  `;
+  if (el) el.prepend(selector);
   const saveBtn = document.getElementById('work-save-btn');
   if (saveBtn) saveBtn.style.display = 'block';
+}
+
+function confirmAddWork() {
+  const cropName = document.getElementById('new-crop-select')?.value;
+  const workType = document.getElementById('new-work-type')?.value || '기타';
+  const detail   = document.getElementById('new-work-detail')?.value || '';
+  if (!cropName) return;
+  pendingWorks.push({ cropName, workType, detail, weather: '☀️', date: selectedWorkDate, fromSchedule: false, source: 'user' });
+  renderWorkLines();
+}
+
+function cancelAddWork() {
+  const row = document.getElementById('crop-selector-row');
+  if (row) row.remove();
 }
 
 function saveWork() {

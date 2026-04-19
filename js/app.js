@@ -32,11 +32,10 @@ function switchTab(tabId) {
   const badgesEl = document.getElementById('header-badges');
   if (badgesEl) {
     if (tabId === 'work') {
-      const crops = STATE.farm.crops.filter(function(c) { return c.cntntsNo; });
       const unique = [];
       const seen = {};
-      crops.forEach(function(c) {
-        if (!seen[c.cntntsNo]) { seen[c.cntntsNo] = true; unique.push(c); }
+      STATE.farm.crops.forEach(function(c) {
+        if (!seen[c.name]) { seen[c.name] = true; unique.push(c); }
       });
       const COLORS = [
         {bg:'#C8E6C9',color:'#1B5E20'},{bg:'#BBDEFB',color:'#0D47A1'},
@@ -46,7 +45,10 @@ function switchTab(tabId) {
       ];
       badgesEl.innerHTML = unique.map(function(c, i) {
         var col = COLORS[i % COLORS.length];
-        return '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + col.bg + ';color:' + col.color + ';white-space:nowrap;">' + c.name + '</span>';
+        var srcIcon = c.cntntsNo ? ' 🌾'
+          : (typeof AI_SCHEDULE_CACHE !== 'undefined' && AI_SCHEDULE_CACHE[c.name]) ? ' 🤖'
+          : '';
+        return '<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:' + col.bg + ';color:' + col.color + ';white-space:nowrap;">' + c.name + srcIcon + '</span>';
       }).join('');
     } else {
       badgesEl.innerHTML = '';
