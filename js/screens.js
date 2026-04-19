@@ -1595,40 +1595,48 @@ async function renderFarmScheduleBadges(year, month) {
     STATE.farm.crops.forEach(function(crop, cropIdx) {
       const color = getCropColor(cropIdx);
 
-      // 농사로 배지
-      if (crop.cntntsNo && FARM_SCHEDULE_CACHE[crop.cntntsNo]) {
-        FARM_SCHEDULE_CACHE[crop.cntntsNo].forEach(function(s) {
-          if (!isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) return;
-          const startDay = eraToDay(s.beginEra);
-          if (!(s.beginMon === month && d === startDay)) return;
-          const eraLabel = {'상':'초','중':'중','하':'말'};
-          const endLabel = s.endMon + '월' + (eraLabel[s.endEra] || s.endEra);
-          const sameDay = s.beginMon === s.endMon && s.beginEra === s.endEra;
-          const label = sameDay ? s.opertNm : s.opertNm + '(~' + endLabel + ')';
-          const badge = document.createElement('div');
-          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;color:' + color.color + ';background:' + color.bg + ';cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;border-left:2px solid #4CAF50;';
-          badge.textContent = label;
-          badge.title = '🌾 농사로 | ' + crop.name + ' ' + s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
-          badgeContainer.appendChild(badge);
-        });
+      function makeBadge(s, source) {
+        const startDay = eraToDay(s.beginEra);
+        const endDay   = eraToDay(s.endEra);
+        const isStart  = s.beginMon === month && d === startDay;
+        const isEnd    = s.endMon   === month && d === endDay;
+        const sameDay  = s.beginMon === s.endMon && s.beginEra === s.endEra;
+
+        // 시작도 종료도 아닌 날은 표시 안함
+        if (!isStart && !isEnd) return;
+        // 같은 날 시작+종료면 시작 배지만 하나만
+        if (sameDay && isEnd && !isStart) return;
+
+        const badge = document.createElement('div');
+        const titlePrefix = source === 'ai' ? '🤖 AI' : '🌾 농사로';
+
+        if (isStart) {
+          // 시작일 — 진한 배지, → 화살표
+          const baseStyle = source === 'ai'
+            ? 'color:#4527A0;background:#EDE7F6;border-left:2px solid #9C27B0;'
+            : 'color:' + color.color + ';background:' + color.bg + ';border-left:2px solid #4CAF50;';
+          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;font-weight:600;max-width:100%;text-overflow:ellipsis;cursor:pointer;' + baseStyle;
+          badge.textContent = '▶ ' + s.opertNm;
+          badge.title = titlePrefix + ' | ' + crop.name + ' ' + s.opertNm + ' 시작 (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
+        } else {
+          // 종료일 — 옅은 배지, ■ 마감
+          const baseStyle = source === 'ai'
+            ? 'color:#9575CD;background:#F3E5F5;border-left:2px solid #CE93D8;opacity:0.75;'
+            : 'color:#888;background:#F5F5F5;border-left:2px solid #C8E6C9;opacity:0.75;';
+          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;font-weight:400;max-width:100%;text-overflow:ellipsis;cursor:pointer;' + baseStyle;
+          badge.textContent = '■ ' + s.opertNm;
+          badge.title = titlePrefix + ' | ' + crop.name + ' ' + s.opertNm + ' 마감 (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
+        }
+        badgeContainer.appendChild(badge);
       }
 
+      // 농사로 배지
+      if (crop.cntntsNo && FARM_SCHEDULE_CACHE[crop.cntntsNo]) {
+        FARM_SCHEDULE_CACHE[crop.cntntsNo].forEach(function(s) { makeBadge(s, 'nongsaro'); });
+      }
       // AI 배지
       if (!crop.cntntsNo && AI_SCHEDULE_CACHE[crop.name]) {
-        AI_SCHEDULE_CACHE[crop.name].forEach(function(s) {
-          if (!isInSchedule(month, d, s.beginMon, s.beginEra, s.endMon, s.endEra)) return;
-          const startDay = eraToDay(s.beginEra);
-          if (!(s.beginMon === month && d === startDay)) return;
-          const eraLabel = {'상':'초','중':'중','하':'말'};
-          const endLabel = s.endMon + '월' + (eraLabel[s.endEra] || s.endEra);
-          const sameDay = s.beginMon === s.endMon && s.beginEra === s.endEra;
-          const label = s.opertNm + (sameDay ? '' : '(~' + endLabel + ')');
-          const badge = document.createElement('div');
-          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;color:#4527A0;background:#EDE7F6;cursor:pointer;font-weight:500;max-width:100%;text-overflow:ellipsis;border-left:2px solid #9C27B0;';
-          badge.textContent = label;
-          badge.title = '🤖 AI | ' + crop.name + ' ' + s.opertNm + ' (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
-          badgeContainer.appendChild(badge);
-        });
+        AI_SCHEDULE_CACHE[crop.name].forEach(function(s) { makeBadge(s, 'ai'); });
       }
     });
   }
