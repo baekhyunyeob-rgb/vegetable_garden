@@ -10,60 +10,49 @@
   <title>슬기로운 텃밭 생활</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
-  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=ea4bdbbdf5c627aba4db0a4b163c9b0d&libraries=services&autoload=false"></script>
+  <script type="text/javascript"
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=ea4bdbbdf5c627aba4db0a4b163c9b0d&libraries=services&autoload=false">
+  </script>
 </head>
 <body>
 <div id="app">
 
-  <!-- ── 헤더 ── -->
-  <header class="app-header" id="app-header">
-    <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
-      <h1 id="header-title">내 텃밭 등록</h1>
-      <div id="header-badges" style="display:flex;flex-wrap:wrap;gap:3px;"></div>
-    </div>
-    <span class="header-sub" id="header-sub"></span>
+  <!-- 헤더 -->
+  <header class="app-header">
+    <h1 id="header-title">내 텃밭</h1>
   </header>
 
-  <!-- ── 화면 래퍼 ── -->
+  <!-- 화면 -->
   <div class="screens-wrapper">
-    <!-- ── 화면 1: 내 텃밭 ── -->
     <div class="screen active" id="screen-my-farm"></div>
-
-    <!-- ── 화면 2: 오늘의 정보 ── -->
-    <div class="screen" id="screen-today"></div>
-
-    <!-- ── 화면 3: 농작업 ── -->
-    <div class="screen" id="screen-work"></div>
-
-    <!-- ── 화면 4: AI 추천 ── -->
-    <div class="screen" id="screen-ai"></div>
+    <div class="screen"        id="screen-today"></div>
+    <div class="screen"        id="screen-journal"></div>
+    <div class="screen"        id="screen-info"></div>
   </div>
 
-  <!-- ── 하단 탭바 ── -->
+  <!-- 하단 탭바 -->
   <nav class="tabbar">
     <button class="tab-btn active" onclick="switchTab('my-farm')">
       <span class="tab-icon">🌱</span>
       <span class="tab-label">내 텃밭</span>
     </button>
     <button class="tab-btn" onclick="switchTab('today')">
-      <span class="tab-icon">🌤</span>
-      <span class="tab-label">오늘의 정보</span>
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">오늘 할 일</span>
     </button>
-    <button class="tab-btn" onclick="switchTab('work')">
-      <span class="tab-icon">📅</span>
-      <span class="tab-label">농작업</span>
+    <button class="tab-btn" onclick="switchTab('journal')">
+      <span class="tab-icon">📓</span>
+      <span class="tab-label">작업 일지</span>
     </button>
-    <button class="tab-btn" onclick="switchTab('ai')">
-      <span class="tab-icon">🤖</span>
-      <span class="tab-label">AI 추천</span>
+    <button class="tab-btn" onclick="switchTab('info')">
+      <span class="tab-icon">🔗</span>
+      <span class="tab-label">정보 연결</span>
     </button>
   </nav>
 
 </div>
 
 <script src="js/data.js"></script>
-<script src="js/csv_crop_db.js"></script>
-<script src="js/nongsaro_db.js"></script>
 <script src="js/screens.js"></script>
 <script src="js/app.js"></script>
 </body>

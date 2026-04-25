@@ -1,83 +1,238 @@
-const FARM_CROPS_DB = [{"name":"녹두","cntntsNo":30702,"cat":"식량"},{"name":"들깨","cntntsNo":259524,"cat":"식량"},{"name":"벼 기계이앙재배","cntntsNo":30697,"cat":"식량"},{"name":"벼 직파재배","cntntsNo":30698,"cat":"식량"},{"name":"사료용벼","cntntsNo":259520,"cat":"식량"},{"name":"옥수수","cntntsNo":30709,"cat":"식량"},{"name":"참깨","cntntsNo":30714,"cat":"식량"},{"name":"콩(논재배)","cntntsNo":259521,"cat":"식량"},{"name":"팥","cntntsNo":30716,"cat":"식량"},{"name":"감자","cntntsNo":30699,"cat":"식량"},{"name":"강낭콩","cntntsNo":30700,"cat":"식량"},{"name":"고구마","cntntsNo":30701,"cat":"식량"},{"name":"들깨(잎)","cntntsNo":30607,"cat":"식량"},{"name":"들깨(종실)","cntntsNo":30703,"cat":"식량"},{"name":"땅콩","cntntsNo":30704,"cat":"식량"},{"name":"맥주보리","cntntsNo":30705,"cat":"식량"},{"name":"메밀","cntntsNo":30706,"cat":"식량"},{"name":"밀","cntntsNo":30707,"cat":"식량"},{"name":"수수","cntntsNo":30708,"cat":"식량"},{"name":"완두","cntntsNo":30710,"cat":"식량"},{"name":"유채","cntntsNo":30711,"cat":"식량"},{"name":"일반보리","cntntsNo":30712,"cat":"식량"},{"name":"조","cntntsNo":30713,"cat":"식량"},{"name":"콩","cntntsNo":30715,"cat":"식량"},{"name":"풋콩","cntntsNo":30717,"cat":"식량"},{"name":"느타리버섯","cntntsNo":30733,"cat":"약초버섯"},{"name":"양송이","cntntsNo":30735,"cat":"약초버섯"},{"name":"영지버섯","cntntsNo":30734,"cat":"약초버섯"},{"name":"팽이","cntntsNo":30736,"cat":"약초버섯"},{"name":"구기자","cntntsNo":30739,"cat":"약초버섯"},{"name":"길경(도라지)","cntntsNo":30740,"cat":"약초버섯"},{"name":"더덕(양유)","cntntsNo":30741,"cat":"약초버섯"},{"name":"두충","cntntsNo":30743,"cat":"약초버섯"},{"name":"산약(마)","cntntsNo":30747,"cat":"약초버섯"},{"name":"오미자","cntntsNo":30749,"cat":"약초버섯"},{"name":"천마","cntntsNo":30756,"cat":"약초버섯"},{"name":"황기","cntntsNo":30761,"cat":"약초버섯"},{"name":"가지","cntntsNo":30770,"cat":"채소"},{"name":"갓","cntntsNo":30595,"cat":"채소"},{"name":"결구상추","cntntsNo":30596,"cat":"채소"},{"name":"고들빼기","cntntsNo":30597,"cat":"채소"},{"name":"고사리","cntntsNo":30598,"cat":"채소"},{"name":"고추(꽈리고추 반촉성)","cntntsNo":30599,"cat":"채소"},{"name":"고추(보통재배)","cntntsNo":30600,"cat":"채소"},{"name":"고추(촉성재배)","cntntsNo":30601,"cat":"채소"},{"name":"곰취","cntntsNo":30602,"cat":"채소"},{"name":"근대","cntntsNo":30603,"cat":"채소"},{"name":"냉이","cntntsNo":30604,"cat":"채소"},{"name":"당근","cntntsNo":30605,"cat":"채소"},{"name":"두릅","cntntsNo":30606,"cat":"채소"},{"name":"딸기(사계성여름재배)","cntntsNo":30609,"cat":"채소"},{"name":"딸기(촉성재배)","cntntsNo":30610,"cat":"채소"},{"name":"마늘","cntntsNo":30611,"cat":"채소"},{"name":"마늘(잎마늘)","cntntsNo":30612,"cat":"채소"},{"name":"멜론","cntntsNo":30613,"cat":"채소"},{"name":"무","cntntsNo":30614,"cat":"채소"},{"name":"무(고랭지재배)","cntntsNo":30615,"cat":"채소"},{"name":"미나리","cntntsNo":30616,"cat":"채소"},{"name":"배추","cntntsNo":30618,"cat":"채소"},{"name":"배추(고랭지재배)","cntntsNo":30619,"cat":"채소"},{"name":"부추","cntntsNo":30620,"cat":"채소"},{"name":"브로콜리(녹색꽃양배추 고랭지재배)","cntntsNo":30621,"cat":"채소"},{"name":"브로콜리(평야지재배)","cntntsNo":30622,"cat":"채소"},{"name":"비트","cntntsNo":30623,"cat":"채소"},{"name":"상추","cntntsNo":30624,"cat":"채소"},{"name":"생강","cntntsNo":30625,"cat":"채소"},{"name":"셀러리(양미나리)","cntntsNo":30626,"cat":"채소"},{"name":"수박","cntntsNo":30627,"cat":"채소"},{"name":"시금치","cntntsNo":30628,"cat":"채소"},{"name":"신선초","cntntsNo":30629,"cat":"채소"},{"name":"쑥갓","cntntsNo":30630,"cat":"채소"},{"name":"아스파라거스","cntntsNo":30632,"cat":"채소"},{"name":"아욱","cntntsNo":30631,"cat":"채소"},{"name":"양배추","cntntsNo":30634,"cat":"채소"},{"name":"양파","cntntsNo":30633,"cat":"채소"},{"name":"연근","cntntsNo":30635,"cat":"채소"},{"name":"오이","cntntsNo":30636,"cat":"채소"},{"name":"적채","cntntsNo":30638,"cat":"채소"},{"name":"쪽파","cntntsNo":30639,"cat":"채소"},{"name":"참외","cntntsNo":30640,"cat":"채소"},{"name":"참취","cntntsNo":30641,"cat":"채소"},{"name":"청경채","cntntsNo":30643,"cat":"채소"},{"name":"치커리(쌈용, 잎치커리)","cntntsNo":258609,"cat":"채소"},{"name":"치커리(치콘,뿌리치커리)","cntntsNo":30644,"cat":"채소"},{"name":"컬리플라워(백색꽃양배추 고랭지재배)","cntntsNo":258607,"cat":"채소"},{"name":"토란","cntntsNo":30645,"cat":"채소"},{"name":"토마토,방울토마토","cntntsNo":30646,"cat":"채소"},{"name":"파","cntntsNo":30647,"cat":"채소"},{"name":"파드득나물","cntntsNo":258611,"cat":"채소"},{"name":"파슬리(향미나리)","cntntsNo":258608,"cat":"채소"},{"name":"파프리카","cntntsNo":30649,"cat":"채소"},{"name":"피망","cntntsNo":30650,"cat":"채소"},{"name":"호박","cntntsNo":30651,"cat":"채소"},{"name":"호박(늙은호박)","cntntsNo":30652,"cat":"채소"},{"name":"호박(단호박)","cntntsNo":30653,"cat":"채소"},{"name":"감귤(노지재배)","cntntsNo":30654,"cat":"과수"},{"name":"감귤(시설재배)","cntntsNo":30655,"cat":"과수"},{"name":"단감","cntntsNo":30656,"cat":"과수"},{"name":"매실","cntntsNo":30658,"cat":"과수"},{"name":"무화과(노지재배)","cntntsNo":30659,"cat":"과수"},{"name":"무화과(무가온 시설재배)","cntntsNo":30660,"cat":"과수"},{"name":"배","cntntsNo":30661,"cat":"과수"},{"name":"복숭아","cntntsNo":30662,"cat":"과수"},{"name":"블루베리","cntntsNo":258549,"cat":"과수"},{"name":"사과","cntntsNo":30663,"cat":"과수"},{"name":"살구","cntntsNo":30664,"cat":"과수"},{"name":"양앵두(체리)","cntntsNo":30665,"cat":"과수"},{"name":"유자","cntntsNo":30666,"cat":"과수"},{"name":"자두","cntntsNo":30667,"cat":"과수"},{"name":"참다래","cntntsNo":30668,"cat":"과수"},{"name":"포도(무가온)","cntntsNo":30669,"cat":"과수"},{"name":"포도(표준가온)","cntntsNo":258613,"cat":"과수"},{"name":"플럼코트","cntntsNo":258633,"cat":"과수"},{"name":"한라봉(부지화)","cntntsNo":30670,"cat":"과수"},{"name":"거베라","cntntsNo":30671,"cat":"화훼"},{"name":"국화","cntntsNo":30672,"cat":"화훼"},{"name":"글라디올러스","cntntsNo":30673,"cat":"화훼"},{"name":"금어초","cntntsNo":30674,"cat":"화훼"},{"name":"꽃도라지","cntntsNo":30675,"cat":"화훼"},{"name":"꽃해바라기","cntntsNo":30676,"cat":"화훼"},{"name":"덴드로비움","cntntsNo":30677,"cat":"화훼"},{"name":"산호수","cntntsNo":30678,"cat":"화훼"},{"name":"선인장","cntntsNo":30679,"cat":"화훼"},{"name":"수국","cntntsNo":30680,"cat":"화훼"},{"name":"스타티스","cntntsNo":30681,"cat":"화훼"},{"name":"시클라멘","cntntsNo":30682,"cat":"화훼"},{"name":"심비디움","cntntsNo":30683,"cat":"화훼"},{"name":"아이리스","cntntsNo":30684,"cat":"화훼"},{"name":"안개초","cntntsNo":30685,"cat":"화훼"},{"name":"오리엔탈나리(촉성재배)","cntntsNo":30686,"cat":"화훼"},{"name":"온시디움","cntntsNo":30687,"cat":"화훼"},{"name":"장미","cntntsNo":30688,"cat":"화훼"},{"name":"철쭉","cntntsNo":30689,"cat":"화훼"},{"name":"카네이션","cntntsNo":30690,"cat":"화훼"},{"name":"칼라","cntntsNo":30691,"cat":"화훼"},{"name":"칼랑코에","cntntsNo":30692,"cat":"화훼"},{"name":"튤립","cntntsNo":30693,"cat":"화훼"},{"name":"팔레놉시스","cntntsNo":30694,"cat":"화훼"},{"name":"포인세티아","cntntsNo":30695,"cat":"화훼"},{"name":"프리지아","cntntsNo":30696,"cat":"화훼"},{"name":"꿀벌","cntntsNo":30720,"cat":"축산"},{"name":"돼지(번식)","cntntsNo":30721,"cat":"축산"},{"name":"돼지(비육)","cntntsNo":258522,"cat":"축산"},{"name":"말","cntntsNo":258523,"cat":"축산"},{"name":"번식한우","cntntsNo":30729,"cat":"축산"},{"name":"번식흑염소","cntntsNo":258635,"cat":"축산"},{"name":"비육한우","cntntsNo":30730,"cat":"축산"},{"name":"비육흑염소","cntntsNo":30732,"cat":"축산"},{"name":"사슴","cntntsNo":258634,"cat":"축산"},{"name":"산란계","cntntsNo":30724,"cat":"축산"},{"name":"오리","cntntsNo":30725,"cat":"축산"},{"name":"육계","cntntsNo":30726,"cat":"축산"},{"name":"젖소(착유우)","cntntsNo":30727,"cat":"축산"},{"name":"토종닭","cntntsNo":30773,"cat":"축산"},{"name":"담근먹이 옥수수","cntntsNo":30763,"cat":"사료작물"},{"name":"동계 사료작물(곤포담근먹이)","cntntsNo":258480,"cat":"사료작물"},{"name":"동하계 사료작물 작부체계","cntntsNo":258612,"cat":"사료작물"},{"name":"볏짚(곤포담근먹이)","cntntsNo":258753,"cat":"사료작물"},{"name":"사료용 귀리","cntntsNo":258524,"cat":"사료작물"},{"name":"사료용 벼(총체벼)","cntntsNo":258525,"cat":"사료작물"},{"name":"사료용 보리(청보리)","cntntsNo":258526,"cat":"사료작물"},{"name":"사료용 호밀","cntntsNo":258527,"cat":"사료작물"},{"name":"수수,수단그라스 교잡종","cntntsNo":258528,"cat":"사료작물"},{"name":"이탈리안라이그라스","cntntsNo":30765,"cat":"사료작물"},{"name":"초지","cntntsNo":30766,"cat":"사료작물"},{"name":"트리티케일","cntntsNo":258529,"cat":"사료작물"}];
+// ══════════════════════════════════════════════
+// data.js — 슬기로운 텃밭 생활
+// 앱 상태 · 작물 DB · 내장 재배력
+// ══════════════════════════════════════════════
 
-// ── 앱 상태 ────────────────────────────────────────
+// ── 텃밭 주요 작물 DB ──────────────────────────
+// 중부지방 기준. 봄/가을 모두 가능한 작물은 두 항목으로 분리.
+const GARDEN_CROPS = [
+  // 봄 작물
+  { name: '고추',         season: '봄',  icon: '🌶' },
+  { name: '토마토',       season: '봄',  icon: '🍅' },
+  { name: '방울토마토',   season: '봄',  icon: '🍅' },
+  { name: '오이',         season: '봄',  icon: '🥒' },
+  { name: '가지',         season: '봄',  icon: '🍆' },
+  { name: '호박',         season: '봄',  icon: '🎃' },
+  { name: '단호박',       season: '봄',  icon: '🎃' },
+  { name: '수박',         season: '봄',  icon: '🍉' },
+  { name: '참외',         season: '봄',  icon: '🍈' },
+  { name: '고구마',       season: '봄',  icon: '🍠' },
+  { name: '옥수수',       season: '봄',  icon: '🌽' },
+  { name: '콩',           season: '봄',  icon: '🫘' },
+  { name: '강낭콩',       season: '봄',  icon: '🫘' },
+  { name: '들깨',         season: '봄',  icon: '🌿' },
+  { name: '참깨',         season: '봄',  icon: '🌿' },
+  { name: '생강',         season: '봄',  icon: '🌱' },
+  { name: '토란',         season: '봄',  icon: '🌱' },
+  { name: '감자(봄)',     season: '봄',  icon: '🥔' },
+  { name: '상추(봄)',     season: '봄',  icon: '🥬' },
+  { name: '열무(봄)',     season: '봄',  icon: '🥬' },
+  { name: '시금치(봄)',   season: '봄',  icon: '🥬' },
+  { name: '당근(봄)',     season: '봄',  icon: '🥕' },
+  { name: '쑥갓(봄)',     season: '봄',  icon: '🌿' },
+  { name: '아욱(봄)',     season: '봄',  icon: '🌿' },
+  { name: '근대(봄)',     season: '봄',  icon: '🌿' },
+  { name: '청경채(봄)',   season: '봄',  icon: '🥬' },
+  { name: '브로콜리(봄)', season: '봄',  icon: '🥦' },
+  { name: '양배추(봄)',   season: '봄',  icon: '🥬' },
+  // 가을 작물
+  { name: '배추',         season: '가을', icon: '🥬' },
+  { name: '무',           season: '가을', icon: '🌱' },
+  { name: '갓',           season: '가을', icon: '🌿' },
+  { name: '쪽파',         season: '가을', icon: '🧅' },
+  { name: '대파',         season: '가을', icon: '🧅' },
+  { name: '마늘',         season: '가을', icon: '🧄' },
+  { name: '양파',         season: '가을', icon: '🧅' },
+  { name: '감자(가을)',   season: '가을', icon: '🥔' },
+  { name: '상추(가을)',   season: '가을', icon: '🥬' },
+  { name: '열무(가을)',   season: '가을', icon: '🥬' },
+  { name: '시금치(가을)', season: '가을', icon: '🥬' },
+  { name: '당근(가을)',   season: '가을', icon: '🥕' },
+  { name: '쑥갓(가을)',   season: '가을', icon: '🌿' },
+  { name: '아욱(가을)',   season: '가을', icon: '🌿' },
+  { name: '근대(가을)',   season: '가을', icon: '🌿' },
+  { name: '청경채(가을)', season: '가을', icon: '🥬' },
+  { name: '브로콜리(가을)',season: '가을', icon: '🥦' },
+  { name: '양배추(가을)', season: '가을', icon: '🥬' },
+];
+
+// ── 내장 재배력 ────────────────────────────────
+// 출처: 농촌진흥청 농사로 텃밭가꾸기 재배캘린더 (중부지방 기준)
+// https://nongsaro.go.kr > 생활문화 > 텃밭가꾸기 > 텃밭작물 재배캘린더
+// 순: 상(1~10일) · 중(11~20일) · 하(21~말일)
+const CROP_CALENDAR = {
+  '고추':           { tasks: [{ name:'정식',      start:'5-상', end:'5-중'  },
+                              { name:'웃거름',    start:'6-중', end:'7-중'  },
+                              { name:'수확',      start:'7-상', end:'10-중' }]},
+  '토마토':         { tasks: [{ name:'정식',      start:'5-상', end:'5-중'  },
+                              { name:'곁순제거',  start:'5-하', end:'8-중'  },
+                              { name:'수확',      start:'7-상', end:'9-중'  }]},
+  '방울토마토':     { tasks: [{ name:'정식',      start:'5-상', end:'5-중'  },
+                              { name:'곁순제거',  start:'5-하', end:'8-중'  },
+                              { name:'수확',      start:'6-하', end:'9-중'  }]},
+  '오이':           { tasks: [{ name:'정식',      start:'5-상', end:'5-중'  },
+                              { name:'유인',      start:'5-하', end:'7-중'  },
+                              { name:'수확',      start:'6-중', end:'8-중'  }]},
+  '가지':           { tasks: [{ name:'정식',      start:'5-상', end:'5-중'  },
+                              { name:'웃거름',    start:'6-중', end:'8-상'  },
+                              { name:'수확',      start:'7-상', end:'10-상' }]},
+  '호박':           { tasks: [{ name:'정식',      start:'4-하', end:'5-중'  },
+                              { name:'유인',      start:'5-중', end:'7-상'  },
+                              { name:'수확',      start:'6-하', end:'9-중'  }]},
+  '단호박':         { tasks: [{ name:'정식',      start:'4-하', end:'5-중'  },
+                              { name:'수확',      start:'7-상', end:'8-중'  }]},
+  '수박':           { tasks: [{ name:'정식',      start:'5-중', end:'5-하'  },
+                              { name:'수확',      start:'7-하', end:'8-중'  }]},
+  '참외':           { tasks: [{ name:'정식',      start:'5-중', end:'5-하'  },
+                              { name:'수확',      start:'7-중', end:'8-중'  }]},
+  '고구마':         { tasks: [{ name:'순심기',    start:'5-중', end:'6-상'  },
+                              { name:'덩굴뒤집기',start:'7-중', end:'8-중'  },
+                              { name:'수확',      start:'9-중', end:'10-상' }]},
+  '옥수수':         { tasks: [{ name:'파종',      start:'4-하', end:'5-중'  },
+                              { name:'솎음',      start:'5-하', end:'6-상'  },
+                              { name:'수확',      start:'7-중', end:'8-상'  }]},
+  '콩':             { tasks: [{ name:'파종',      start:'5-중', end:'6-상'  },
+                              { name:'북주기',    start:'6-하', end:'7-상'  },
+                              { name:'수확',      start:'9-상', end:'10-상' }]},
+  '강낭콩':         { tasks: [{ name:'파종',      start:'4-하', end:'5-중'  },
+                              { name:'수확',      start:'6-하', end:'7-중'  }]},
+  '들깨':           { tasks: [{ name:'정식',      start:'5-중', end:'6-상'  },
+                              { name:'잎수확',    start:'6-하', end:'9-상'  },
+                              { name:'종실수확',  start:'9-중', end:'10-중' }]},
+  '참깨':           { tasks: [{ name:'파종',      start:'5-중', end:'5-하'  },
+                              { name:'수확',      start:'8-중', end:'9-상'  }]},
+  '생강':           { tasks: [{ name:'파종',      start:'5-상', end:'5-중'  },
+                              { name:'수확',      start:'10-중',end:'11-상' }]},
+  '토란':           { tasks: [{ name:'파종',      start:'4-중', end:'5-상'  },
+                              { name:'수확',      start:'10-상',end:'10-하' }]},
+  '감자(봄)':       { tasks: [{ name:'파종',      start:'3-하', end:'4-상'  },
+                              { name:'북주기',    start:'5-상', end:'5-중'  },
+                              { name:'수확',      start:'6-상', end:'6-하'  }]},
+  '상추(봄)':       { tasks: [{ name:'파종·정식', start:'3-중', end:'4-중'  },
+                              { name:'수확',      start:'4-하', end:'6-중'  }]},
+  '열무(봄)':       { tasks: [{ name:'파종',      start:'3-중', end:'5-상'  },
+                              { name:'수확',      start:'4-하', end:'6-상'  }]},
+  '시금치(봄)':     { tasks: [{ name:'파종',      start:'3-상', end:'4-상'  },
+                              { name:'수확',      start:'4-중', end:'5-중'  }]},
+  '당근(봄)':       { tasks: [{ name:'파종',      start:'4-중', end:'5-중'  },
+                              { name:'솎음',      start:'5-하', end:'6-상'  },
+                              { name:'수확',      start:'7-중', end:'8-중'  }]},
+  '쑥갓(봄)':       { tasks: [{ name:'파종',      start:'3-하', end:'5-상'  },
+                              { name:'수확',      start:'4-하', end:'6-상'  }]},
+  '아욱(봄)':       { tasks: [{ name:'파종',      start:'4-상', end:'5-상'  },
+                              { name:'수확',      start:'5-중', end:'6-중'  }]},
+  '근대(봄)':       { tasks: [{ name:'파종',      start:'4-상', end:'5-상'  },
+                              { name:'수확',      start:'5-중', end:'7-상'  }]},
+  '청경채(봄)':     { tasks: [{ name:'파종',      start:'4-상', end:'5-상'  },
+                              { name:'수확',      start:'5-상', end:'6-상'  }]},
+  '브로콜리(봄)':   { tasks: [{ name:'정식',      start:'4-상', end:'4-중'  },
+                              { name:'수확',      start:'5-하', end:'6-하'  }]},
+  '양배추(봄)':     { tasks: [{ name:'정식',      start:'3-중', end:'4-상'  },
+                              { name:'수확',      start:'5-중', end:'6-중'  }]},
+  // 가을
+  '배추':           { tasks: [{ name:'모종심기',  start:'8-하', end:'9-상'  },
+                              { name:'웃거름',    start:'9-중', end:'9-하'  },
+                              { name:'수확',      start:'11-상',end:'11-하' }]},
+  '무':             { tasks: [{ name:'파종',      start:'8-하', end:'9-상'  },
+                              { name:'솎음',      start:'9-중', end:'9-하'  },
+                              { name:'수확',      start:'11-상',end:'11-하' }]},
+  '갓':             { tasks: [{ name:'파종',      start:'8-하', end:'9-중'  },
+                              { name:'수확',      start:'10-중',end:'11-중' }]},
+  '쪽파':           { tasks: [{ name:'심기',      start:'8-하', end:'9-중'  },
+                              { name:'수확',      start:'10-하',end:'11-중' }]},
+  '대파':           { tasks: [{ name:'정식',      start:'9-상', end:'9-중'  },
+                              { name:'수확',      start:'11-상',end:'11-하' }]},
+  '마늘':           { tasks: [{ name:'파종',      start:'9-하', end:'10-중' },
+                              { name:'웃거름',    start:'다음해3월', end:'다음해4월'},
+                              { name:'수확',      start:'다음해6상', end:'다음해6중'}]},
+  '양파':           { tasks: [{ name:'정식',      start:'10-상',end:'10-중' },
+                              { name:'웃거름',    start:'다음해3월', end:'다음해4월'},
+                              { name:'수확',      start:'다음해6중', end:'다음해6하'}]},
+  '감자(가을)':     { tasks: [{ name:'파종',      start:'7-하', end:'8-상'  },
+                              { name:'수확',      start:'10-하',end:'11-하' }]},
+  '상추(가을)':     { tasks: [{ name:'파종·정식', start:'8-중', end:'9-상'  },
+                              { name:'수확',      start:'9-하', end:'10-하' }]},
+  '열무(가을)':     { tasks: [{ name:'파종',      start:'8-상', end:'9-상'  },
+                              { name:'수확',      start:'9-상', end:'10-상' }]},
+  '시금치(가을)':   { tasks: [{ name:'파종',      start:'9-상', end:'10-상' },
+                              { name:'수확',      start:'10-중',end:'11-중' }]},
+  '당근(가을)':     { tasks: [{ name:'파종',      start:'7-중', end:'8-중'  },
+                              { name:'솎음',      start:'8-하', end:'9-상'  },
+                              { name:'수확',      start:'10-중',end:'11-중' }]},
+  '쑥갓(가을)':     { tasks: [{ name:'파종',      start:'8-하', end:'9-중'  },
+                              { name:'수확',      start:'9-하', end:'10-하' }]},
+  '아욱(가을)':     { tasks: [{ name:'파종',      start:'8-중', end:'9-상'  },
+                              { name:'수확',      start:'9-중', end:'10-중' }]},
+  '근대(가을)':     { tasks: [{ name:'파종',      start:'8-중', end:'9-상'  },
+                              { name:'수확',      start:'9-하', end:'10-하' }]},
+  '청경채(가을)':   { tasks: [{ name:'파종',      start:'8-하', end:'9-중'  },
+                              { name:'수확',      start:'9-하', end:'10-중' }]},
+  '브로콜리(가을)': { tasks: [{ name:'정식',      start:'8-중', end:'9-상'  },
+                              { name:'수확',      start:'10-하',end:'11-하' }]},
+  '양배추(가을)':   { tasks: [{ name:'정식',      start:'8-중', end:'9-상'  },
+                              { name:'수확',      start:'11-상',end:'11-하' }]},
+};
+
+// ── 앱 상태 ────────────────────────────────────
 const STATE = {
   currentTab: 'my-farm',
-  farm: {           // 내 텃밭 데이터
-    lands: [],      // [{jibun, jimok}]
-    crops: [],      // [{jibun, category, name, area, unit}]
-    pendingCrops: [], // 현재 입력 중인 작물 (임시)
-    currentParcel: null, // 현재 조회된 필지 정보
+  farm: {
+    lands:        [],   // [{ jibun, jimok, areaSqm, areaPyeong, pnu }]
+    crops:        [],   // [{ jibun, name, season, area, unit }]
+    pendingCrops: [],
+    currentParcel: null,
   },
-  calendar: {       // 농작업 데이터
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
-    works: {},      // {'YYYY-MM-DD': [{cropName, workType, detail, weather}]}
+  journal: {
+    entries: {},        // { 'YYYY-MM-DD': [{ cropName, task, note, weather }] }
   },
 };
 
-// ── 작물 분류 ───────────────────────────────────────
-const CROP_CATEGORIES = [
-  {
-    id: 'rice', label: '수도작', badgeClass: 'badge-rice',
-    crops: ['벼', '찹쌀', '흑미', '밭벼'],
-  },
-  {
-    id: 'veg', label: '채소', badgeClass: 'badge-veg',
-    crops: ['고추', '배추', '마늘', '양파', '콩', '감자', '고구마', '상추', '참깨', '들깨', '오이', '토마토', '호박', '당근', '무'],
-  },
-  {
-    id: 'tree', label: '수목', badgeClass: 'badge-tree',
-    crops: ['감귤', '배', '사과', '복숭아', '유자', '밤나무', '대추', '모과', '감나무', '키위'],
-  },
-  {
-    id: 'flower', label: '화훼·특용', badgeClass: 'badge-flower',
-    crops: ['국화', '장미', '모시풀', '인삼', '황기', '당귀'],
-  },
-  {
-    id: 'herb', label: '산채·약초', badgeClass: 'badge-herb',
-    crops: ['고사리', '두릅', '도라지', '더덕', '취나물', '참나물', '산마늘'],
-  },
-];
+const WORK_TYPES = ['파종','정식','시비','방제','관수','제초','수확',
+                    '곁순제거','유인','솎음','북주기','기타'];
 
-// ── 작업 종류 ───────────────────────────────────────
-const WORK_TYPES = ['파종', '정식', '시비', '방제', '관수', '제초', '수확', '기타'];
-
-// ── localStorage 저장/불러오기 ──────────────────────
+// ── localStorage ───────────────────────────────
 function saveState() {
-  localStorage.setItem('farming_farm', JSON.stringify(STATE.farm));
-  localStorage.setItem('farming_calendar', JSON.stringify(STATE.calendar));
+  localStorage.setItem('tg_farm',    JSON.stringify(STATE.farm));
+  localStorage.setItem('tg_journal', JSON.stringify(STATE.journal));
 }
-
 function loadState() {
   try {
-    const farm = localStorage.getItem('farming_farm');
-    const cal  = localStorage.getItem('farming_calendar');
-    if (farm) STATE.farm = JSON.parse(farm);
-    if (cal)  STATE.calendar = JSON.parse(cal);
-  } catch(e) {
-    console.warn('상태 불러오기 실패', e);
-  }
+    const farm    = localStorage.getItem('tg_farm');
+    const journal = localStorage.getItem('tg_journal');
+    if (farm)    STATE.farm    = JSON.parse(farm);
+    if (journal) STATE.journal = JSON.parse(journal);
+  } catch(e) { console.warn('상태 불러오기 실패', e); }
 }
 
-// ── 유틸 ───────────────────────────────────────────
+// ── 날짜 유틸 ──────────────────────────────────
 function todayStr() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+function formatDateShort(s) { const [,m,d]=s.split('-'); return `${+m}.${+d}`; }
+
+// "5-상" → { month, day }  /  "다음해~" → null
+function parseEra(str) {
+  if (!str || str.startsWith('다음해')) return null;
+  const [m, e] = str.split('-');
+  return { month: parseInt(m), day: e==='상'?5 : e==='중'?15 : 25 };
 }
 
-function formatDate(dateStr) {
-  const [y, m, d] = dateStr.split('-');
-  return `${m}.${d}`;
+// 오늘(month, day)이 과업 기간 안인지
+function isTaskActive(task, month, day) {
+  const s = parseEra(task.start);
+  const e = parseEra(task.end);
+  if (!s || !e) return false;
+  const cur = month*100+day, b = s.month*100+s.day, en = e.month*100+e.day;
+  return b<=en ? (cur>=b && cur<=en) : (cur>=b || cur<=en);
 }
 
-function getCropBadgeClass(cropName) {
-  for (const cat of CROP_CATEGORIES) {
-    if (cat.crops.includes(cropName)) return cat.badgeClass;
-  }
-  return 'badge-veg';
-}
-
-function sqmToPyeong(sqm) {
-  return Math.round(sqm / 3.305785);
+// 과업 시작까지 남은 일수 (양수 = 아직 안 왔음)
+function daysUntilTask(task, month, day) {
+  const s = parseEra(task.start);
+  if (!s) return null;
+  const today = new Date(new Date().getFullYear(), month-1, day);
+  const start = new Date(new Date().getFullYear(), s.month-1, s.day);
+  return Math.ceil((start - today) / 86400000);
 }
