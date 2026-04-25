@@ -44,7 +44,13 @@ function switchTab(tabId) {
         {bg:'#DCEDC8',color:'#33691E'},{bg:'#FFF9C4',color:'#F57F17'},
       ];
       badgesEl.innerHTML = unique.map(function(c, i) {
-        var col = COLORS[i % COLORS.length];
+        // screens.js의 CROP_COLORS와 동일한 배열 사용 → 색상 통일
+        var col = (typeof CROP_COLORS !== 'undefined' ? CROP_COLORS : [
+          {bg:'#C8E6C9',color:'#1B5E20'},{bg:'#BBDEFB',color:'#0D47A1'},
+          {bg:'#FFE0B2',color:'#E65100'},{bg:'#F8BBD0',color:'#880E4F'},
+          {bg:'#E1BEE7',color:'#4A148C'},{bg:'#B2EBF2',color:'#006064'},
+          {bg:'#DCEDC8',color:'#33691E'},{bg:'#FFF9C4',color:'#F57F17'},
+        ])[i % 8];
         var srcIcon = c.cntntsNo ? ' 🌾'
           : (typeof AI_SCHEDULE_CACHE !== 'undefined' && AI_SCHEDULE_CACHE[c.name]) ? ' 🤖'
           : '';

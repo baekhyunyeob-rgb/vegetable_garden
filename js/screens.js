@@ -934,8 +934,8 @@ function renderCalendar(year, month) {
     <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;padding:2px 2px 0;">
       <span style="font-size:8px;color:#555;display:flex;align-items:center;gap:2px;"><span style="font-weight:700;color:#2E7D32;">▶</span> 시작</span>
       <span style="font-size:8px;color:#999;display:flex;align-items:center;gap:2px;"><span style="font-weight:700;">■</span> 마감</span>
-      <span style="font-size:8px;color:#555;">🌾 농사로</span>
-      <span style="font-size:8px;color:#555;">🤖 AI</span>
+      <span style="font-size:8px;color:#555;">🌾실선=농사로</span>
+      <span style="font-size:8px;color:#555;">🤖점선=AI</span>
     </div>`;
   return dayLabels + cells + legend;
 }
@@ -1649,21 +1649,17 @@ async function renderFarmScheduleBadges(year, month) {
 
         const badge = document.createElement('div');
         const titlePrefix = source === 'ai' ? '🤖 AI' : '🌾 농사로';
+        // 출처 구분: 농사로=실선, AI=점선 (색상은 작물 통일)
+        const borderStyle = source === 'ai'
+          ? 'border-left:2px dashed ' + color.color + ';'
+          : 'border-left:2px solid '  + color.color + ';';
 
         if (isStart) {
-          // 시작일 — 진한 배지, → 화살표
-          const baseStyle = source === 'ai'
-            ? 'color:#4527A0;background:#EDE7F6;border-left:2px solid #9C27B0;'
-            : 'color:' + color.color + ';background:' + color.bg + ';border-left:2px solid #4CAF50;';
-          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;font-weight:600;max-width:100%;text-overflow:ellipsis;cursor:pointer;' + baseStyle;
+          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;font-weight:600;max-width:100%;text-overflow:ellipsis;cursor:pointer;color:' + color.color + ';background:' + color.bg + ';' + borderStyle;
           badge.textContent = '▶ ' + s.opertNm;
           badge.title = titlePrefix + ' | ' + crop.name + ' ' + s.opertNm + ' 시작 (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
         } else {
-          // 종료일 — 옅은 배지, ■ 마감
-          const baseStyle = source === 'ai'
-            ? 'color:#9575CD;background:#F3E5F5;border-left:2px solid #CE93D8;opacity:0.75;'
-            : 'color:#888;background:#F5F5F5;border-left:2px solid #C8E6C9;opacity:0.75;';
-          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;font-weight:400;max-width:100%;text-overflow:ellipsis;cursor:pointer;' + baseStyle;
+          badge.style.cssText = 'font-size:6px;padding:0px 3px;border-radius:3px;line-height:1.3;white-space:nowrap;overflow:hidden;display:block;font-weight:400;max-width:100%;text-overflow:ellipsis;cursor:pointer;color:' + color.color + ';background:' + color.bg + ';opacity:0.6;' + borderStyle;
           badge.textContent = '■ ' + s.opertNm;
           badge.title = titlePrefix + ' | ' + crop.name + ' ' + s.opertNm + ' 마감 (' + s.beginMon + '월' + s.beginEra + '~' + s.endMon + '월' + s.endEra + ')';
         }
